@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { font-family: 'Geologica', system-ui, sans-serif; }
+  body { @apply bg-cream text-ink antialiased; margin: 0; }
+  :focus-visible { outline: 2px solid #A9705F; outline-offset: 2px; }
+}
+
+/* Hide the page scrollbar but keep scrolling */
+html {
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* old Edge */
+}
+html::-webkit-scrollbar {
+  display: none;              /* Chrome, Edge, Safari */
+}
