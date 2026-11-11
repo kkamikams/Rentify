@@ -126,6 +126,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
   }, [days, reload])
 
   const visible = items.filter((i) => branch === 'All branches' || i.branches?.name === branch)
+    const multi = new Set(items.map((i) => i.branches?.name)).size > 1
   const chosenId = visible.find((i) => i.id === itemId)?.id ?? visible[0]?.id ?? ''
   const legendBranches = [
     ...new Map(visible.filter((i) => i.branches).map((i) => [codeOf(i.branches!.name), i.branches!.name])),
@@ -219,7 +220,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
           </div>
         </div>
         <p className="mb-6 text-[8px] leading-tight text-ink">
-          {legendBranches.map(([code, bName]) => (
+          {(multi ? legendBranches : []).map(([code, bName]) => (
             <span key={code} className="block">
               {code} = {bName}
             </span>

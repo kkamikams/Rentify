@@ -15,8 +15,7 @@ import InventoryPage from './shop/InventoryPage'
 import CostsPage from './shop/CostsPage'
 import ReportsPage from './shop/ReportsPage'
 import RulesPage from './shop/RulesPage'
-
-const BRANCHES = ['All branches', 'CDO Downtown', 'CDO Uptown']
+import ShopMessagesPage from './shop/ShopMessagesPage'
 
 const TABS = [
   { id: 'requests', icon: Contact, title: 'Reservation Requests' },
@@ -40,23 +39,27 @@ export default function ShopApp({
   shopName?: string
   onSignOut?: () => void
 }) {
-  const [branch, setBranch] = useState(BRANCHES[0])
-  const [tab, setTab] = useState<TabId>('requests')
   const shop = useShop(shopId)
-  const p = { shop, branch }
+  const [branch, setBranch] = useState('All branches')
+  const [tab, setTab] = useState<TabId>('requests')
+
+  // One branch = no branch tabs. Two or more = All branches + one tab per branch.
+  const multi = shop.branches.length > 1
+  const branchTabs = ['All branches', ...shop.branches.map((b) => b.name)]
+  const p = { shop, branch: multi ? branch : 'All branches' }
 
   const pages: Record<TabId, ReactNode> = {
     requests: <RequestsPage {...p} />,
     today: <TodayPage {...p} />,
-    calendar: <CalendarPage branch={branch} />,
+    calendar: <CalendarPage branch={p.branch} />,
     status: <StatusBoardPage {...p} />,
-    pickup: <PickupReturnPage />,
+    pickup: <PickupReturnPage {...p} />,
     customers: <CustomersPage {...p} />,
     inventory: <InventoryPage {...p} />,
     costs: <CostsPage {...p} />,
     reports: <ReportsPage {...p} />,
     rules: <RulesPage {...p} />,
-    messages: <p className="text-sm text-ink/60">Messages are not built yet.</p>,
+        messages: <ShopMessagesPage {...p} />,
   }
   const title = tab === 'messages' ? 'Messages' : TABS.find((t) => t.id === tab)!.title
 
@@ -65,15 +68,19 @@ export default function ShopApp({
       <header className="border-t-4 border-ink bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <nav className="flex flex-1 justify-center gap-16">
-            {BRANCHES.map((b) => (
-              <button key={b} onClick={() => setBranch(b)}
-                className={`pb-0.5 text-sm font-medium ${branch === b ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
-                {b}
-              </button>
-            ))}
+            {multi ? (
+              branchTabs.map((b) => (
+                <button key={b} onClick={() => setBranch(b)}
+                  className={`pb-0.5 text-sm font-medium ${branch === b ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
+                  {b}
+                </button>
+              ))
+            ) : (
+              <span className="text-sm font-semibold">{shopName}</span>
+            )}
           </nav>
           <div className="flex items-center gap-5">
-            <span className="text-sm font-medium">{shopName}</span>
+            {multi && <span className="text-sm font-medium">{shopName}</span>}
             <button onClick={() => setTab('messages')} title="Messages" aria-label="Messages">
               <MessageCircle size={20} fill="currentColor" />
             </button>

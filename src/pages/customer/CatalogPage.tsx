@@ -29,8 +29,12 @@ export default function CatalogPage({
   const [q, setQ] = useState('')
   const [sort, setSort] = useState('name')
 
+  // One branch = no branch tags and no branch filter
+  const multi = new Set(items.map((i) => i.branches?.name)).size > 1
+  const active = multi ? branch : 'All branches'
+
   const list = items
-    .filter((i) => branch === 'All branches' || i.branches?.name === branch)
+    .filter((i) => active === 'All branches' || i.branches?.name === active)
     .filter((i) => category === 'All' || i.category === category)
     .filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) =>
@@ -62,7 +66,7 @@ export default function CatalogPage({
       </div>
       {list.length === 0 && <p className="text-center text-sm text-ink/60">No items found.</p>}
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-        {list.map((i) => <ItemCard key={i.id} item={i} onOpen={() => onOpen(i.id)} showBranch />)}
+        {list.map((i) => <ItemCard key={i.id} item={i} onOpen={() => onOpen(i.id)} showBranch={multi} />)}
       </div>
     </div>
   )

@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { MessageCircle, ShoppingBag, User } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { peso } from '../lib/shop'
 import { Tag } from '../lib/ui'
+import { useCatalog } from '../lib/customer'
+import type { CItem } from '../lib/customer'
+import ItemPage, { SentPage } from './customer/ItemPage'
+import MyBookingsPage from './customer/MyBookingsPage'
+import MessagesPage from './customer/MessagesPage'
 
-type Row = {
-  id: string; name: string; category: string | null
-  price_per_day: number | null; deposit: number | null
-  branches: { name: string } | null
-}
-type Product = { name: string; category: string | null; price: number; deposit: number; branches: string[] }
+type Product = { name: string; category: string | null; price: number; deposit: number; branches: string[]; rows: CItem[] }
+type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages'
 
-const BRANCHES = ['All branches', 'CDO Downtown', 'CDO Uptown']
 const CATS = ['Gown', 'Formal wear', 'Costume', 'Barong']
 const label = (c: string) => (c === 'Formal wear' ? 'Formal Wear' : c)
 const amber = 'font-semibold text-[#E3A21A]'
@@ -29,53 +30,79 @@ const Instagram = () => (
   </svg>
 )
 
-function Card({ p }: { p: Product }) {
+function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOpen: () => void }) {
+  const img = p.rows.find((r) => r.image_url)?.image_url
   return (
-    <div>
-      <div className="aspect-[3/4] bg-white" />
+    <button onClick={onOpen} className="text-left">
+      <div className="aspect-[3/4] w-full overflow-hidden bg-white">
+        {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
+      </div>
       <p className="mt-2 text-[11px]">{p.name}</p>
       <p className="text-[11px]"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
-      <div className="mt-1 flex flex-wrap gap-1">{p.branches.map((b) => <Tag key={b}>{b}</Tag>)}</div>
-    </div>
+      {showBranch && (
+        <div className="mt-1 flex flex-wrap gap-1">{p.branches.map((b) => <Tag key={b}>{b}</Tag>)}</div>
+      )}
+    </button>
   )
 }
 
 export default function CustomerApp({ name, onSignOut }: { name?: string; onSignOut: () => void }) {
-  const [view, setView] = useState<'home' | 'catalog' | 'bookings' | 'messages'>('home')
-  const [branch, setBranch] = useState(BRANCHES[0])
-  const [cat, setCat] = useState('All')
+  const cat = useCatalog()
+  const [session, setSession] = useState<Session | null>(null)
+  const [view, setView] = useState<View>('home')
+  const [branch, setBranch] = useState('All branches')
+  const [category, setCategory] = useState('All')
   const [q, setQ] = useState('')
-  const [rows, setRows] = useState<Row[]>([])
-  const [error, setError] = useState('')
+  const [itemId, setItemId] = useState('')
+  const [sent, setSent] = useState({ start: '', end: '' })
+  const [msgBranch, setMsgBranch] = useState<string | undefined>()
 
   useEffect(() => {
-    supabase
-      .from('items')
-      .select('id, name, category, price_per_day, deposit, branches(name)')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) setError(error.message)
-        else setRows((data ?? []) as unknown as Row[])
-      })
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    return () => data.subscription.unsubscribe()
   }, [])
+
+  // Newest items first
+  const rows = useMemo(
+    () => [...cat.items].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
+    [cat.items]
+  )
+
+  // Branch names come from the items. One branch = no branch tabs and no branch tags.
+  const branchNames = useMemo(
+    () => [...new Set(rows.map((r) => r.branches?.name).filter((n): n is string => !!n))].sort(),
+    [rows]
+  )
+  const multi = branchNames.length > 1
+  const active = multi ? branch : 'All branches'
 
   // One card per item name; the tags list every branch that has it
   const products = useMemo(() => {
     const m = new Map<string, Product>()
     rows
-      .filter((r) => branch === 'All branches' || r.branches?.name === branch)
+      .filter((r) => active === 'All branches' || r.branches?.name === active)
       .forEach((r) => {
-        const p = m.get(r.name) ?? { name: r.name, category: r.category, price: r.price_per_day ?? 0, deposit: r.deposit ?? 0, branches: [] }
+        const p = m.get(r.name) ?? { name: r.name, category: r.category, price: r.price_per_day ?? 0, deposit: r.deposit ?? 0, branches: [], rows: [] }
         if (r.branches?.name && !p.branches.includes(r.branches.name)) p.branches.push(r.branches.name)
+        p.rows.push(r)
         m.set(r.name, p)
       })
     return [...m.values()]
-  }, [rows, branch])
+  }, [rows, active])
 
   const shown = products.filter(
-    (p) => (cat === 'All' || p.category === cat) && p.name.toLowerCase().includes(q.toLowerCase())
+    (p) => (category === 'All' || p.category === category) && p.name.toLowerCase().includes(q.toLowerCase())
   )
-  const go = (v: typeof view, c = 'All') => { setView(v); setCat(c) }
+
+  const go = (v: View, c = 'All') => { setView(v); setCategory(c); window.scrollTo(0, 0) }
+  const open = (p: Product) => {
+    const r = p.rows.find((x) => x.branches?.name === active) ?? p.rows[0]
+    setItemId(r.id)
+    setView('item')
+    window.scrollTo(0, 0)
+  }
+  const item = cat.items.find((i) => i.id === itemId)
 
   return (
     <div className="min-h-screen bg-cream">
@@ -86,24 +113,26 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
       <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <button onClick={() => go('home')} className="text-xl font-semibold">Rentify.</button>
-          <nav className="flex gap-10 text-sm font-medium">
-            {BRANCHES.map((b) => (
-              <button key={b} onClick={() => { setBranch(b); setView('catalog') }}
-                className={`pb-0.5 ${view === 'catalog' && branch === b ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
-                {b}
-              </button>
-            ))}
-          </nav>
+          {multi && (
+            <nav className="flex gap-10 text-sm font-medium">
+              {['All branches', ...branchNames].map((b) => (
+                <button key={b} onClick={() => { setBranch(b); go('catalog') }}
+                  className={`pb-0.5 ${view === 'catalog' && active === b ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
+                  {b}
+                </button>
+              ))}
+            </nav>
+          )}
           <div className="flex items-center gap-5">
             {name && <span className="hidden text-sm sm:inline">{name}</span>}
-            <button onClick={() => go('messages')} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
+            <button onClick={() => { setMsgBranch(undefined); go('messages') }} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
             <button onClick={onSignOut} title="Sign out" aria-label="Sign out"><User size={20} fill="currentColor" /></button>
             <button onClick={() => go('bookings')} title="My bookings" aria-label="My bookings"><ShoppingBag size={20} fill="currentColor" /></button>
           </div>
         </div>
       </header>
 
-      {error && <p className="px-6 pt-4 text-sm text-cleaning">{error}</p>}
+      {cat.error && <p className="px-6 pt-4 text-sm text-cleaning">{cat.error}</p>}
 
       {view === 'home' && (
         <>
@@ -133,9 +162,9 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
 
             <h2 className="mb-6 mt-10 inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">NEW ARRIVALS</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-6">
-              {products.slice(0, 6).map((p) => <Card key={p.name} p={p} />)}
+              {products.slice(0, 6).map((p) => <Card key={p.name} p={p} showBranch={multi} onOpen={() => open(p)} />)}
             </div>
-            {products.length === 0 && !error && <p className="text-sm text-ink/60">No items yet.</p>}
+            {products.length === 0 && !cat.error && <p className="text-sm text-ink/60">No items yet.</p>}
           </section>
 
           <footer className="bg-ink px-6 py-10 text-xs text-cream">
@@ -151,8 +180,8 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
         <main className="mx-auto max-w-6xl px-6 py-8">
           <nav className="mb-4 flex justify-center gap-8 text-sm font-medium">
             {['All', ...CATS].map((c) => (
-              <button key={c} onClick={() => setCat(c)}
-                className={`pb-0.5 ${cat === c ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
+              <button key={c} onClick={() => setCategory(c)}
+                className={`pb-0.5 ${category === c ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
                 {c === 'All' ? 'All' : label(c)}
               </button>
             ))}
@@ -163,17 +192,36 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
               className="w-32 rounded-full bg-cell px-3 py-0.5 text-[10px]" />
           </div>
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-            {shown.map((p) => <Card key={p.name} p={p} />)}
+            {shown.map((p) => <Card key={p.name} p={p} showBranch={multi} onOpen={() => open(p)} />)}
           </div>
-          {shown.length === 0 && !error && <p className="text-center text-sm text-ink/60">No items found.</p>}
+          {shown.length === 0 && !cat.error && <p className="text-center text-sm text-ink/60">No items found.</p>}
         </main>
       )}
 
-      {(view === 'bookings' || view === 'messages') && (
-        <main className="mx-auto max-w-6xl px-6 py-8">
-          <h1 className="mb-4 text-lg font-medium">{view === 'bookings' ? 'My bookings' : 'Messages'}</h1>
-          <p className="text-sm text-ink/60">This page is not built yet.</p>
-        </main>
+      {view === 'item' && item && (
+        <ItemPage
+          key={item.id}
+          item={item}
+          branches={cat.branches}
+          shop={cat.shops.find((s) => s.id === item.shop_id)}
+          session={session}
+          onBack={() => go('catalog')}
+          onNeedAuth={() => {}}
+          onSent={(start, end) => { setSent({ start, end }); setView('sent'); window.scrollTo(0, 0) }}
+        />
+      )}
+
+      {view === 'sent' && item && (
+        <SentPage item={item} start={sent.start} end={sent.end}
+          onBack={() => go('catalog')} onBookings={() => go('bookings')} />
+      )}
+
+      {view === 'bookings' && (
+        <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
+      )}
+
+      {view === 'messages' && session && (
+        <MessagesPage session={session} branches={cat.branches} initialBranch={msgBranch} />
       )}
     </div>
   )
