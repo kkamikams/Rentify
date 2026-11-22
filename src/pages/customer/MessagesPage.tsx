@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { User } from 'lucide-react'
+import { ArrowLeft, User } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import type { CBranch, Msg } from '../../lib/customer'
 
 const time = (s: string) => new Date(s).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
 
 export default function MessagesPage({
-  session, branches, initialBranch,
-}: { session: Session; branches: CBranch[]; initialBranch?: string }) {
+  session, branches, initialBranch, onBack,
+}: { session: Session; branches: CBranch[]; initialBranch?: string; onBack: () => void }) {
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [sel, setSel] = useState(initialBranch ?? '')
   const [text, setText] = useState('')
@@ -60,6 +60,14 @@ export default function MessagesPage({
 
       <section className="flex h-[420px] flex-col rounded-sm bg-white shadow-md">
         <header className="flex items-center gap-3 border-b border-ink/20 p-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-cell"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={20} />
+          </button>
           <span className="grid h-10 w-10 place-items-center rounded-full bg-reserved"><User size={18} /></span>
           <span className="text-xl font-bold">{cur?.name}</span>
         </header>

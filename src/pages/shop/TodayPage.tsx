@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import type { Booking, Shop } from '../../lib/shop'
 import { branchName, diffDays, fmt, inBranch, norm, peso, today } from '../../lib/shop'
 import { btn, card, Tag } from '../../lib/ui'
 
 export default function TodayPage({ shop, branch }: { shop: Shop; branch: string }) {
+  const [simulatedReminders, setSimulatedReminders] = useState<Record<string, boolean>>({})
   const now = today()
   const mine = shop.bookings.filter((b) => inBranch(branch, branchName(b)))
   const fee = (b: Booking) => b.items?.late_fee_per_day ?? 0
@@ -50,9 +52,18 @@ export default function TodayPage({ shop, branch }: { shop: Shop; branch: string
                 <div className={g.red ? 'text-cleaning' : ''}>{g.line(b)}</div>
               </div>
               {b.customer_phone && (
-                <a className={btn} href={`sms:${b.customer_phone}?body=${encodeURIComponent(g.sms(b))}`}>
-                  Send Reminder
-                </a>
+                <div className="text-right">
+                  <button
+                    type="button"
+                    className={btn}
+                    onClick={() => setSimulatedReminders((current) => ({ ...current, [b.id]: true }))}
+                  >
+                    {simulatedReminders[b.id] ? 'Reminder simulated' : 'Simulate Reminder'}
+                  </button>
+                  {simulatedReminders[b.id] && (
+                    <p className="mt-1 text-xs text-ink/60" role="status">Simulation only — no SMS was sent.</p>
+                  )}
+                </div>
               )}
             </div>
           ))}

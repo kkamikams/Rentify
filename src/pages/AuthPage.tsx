@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
 type Role = 'customer' | 'shop'
@@ -50,6 +51,17 @@ export default function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream p-6">
       <div className="w-full max-w-sm rounded-sm bg-white p-8 shadow-sm">
+        {mode === 'signup' && (
+          <button
+            type="button"
+            className="mb-4 flex items-center gap-1 text-sm font-medium text-ink/70 hover:text-ink"
+            onClick={() => { setMode('login'); setError(''); setInfo('') }}
+            aria-label="Back to log in"
+          >
+            <ArrowLeft size={16} />
+            Back to log in
+          </button>
+        )}
         <h1 className="text-2xl font-semibold">Rentify.</h1>
         <p className="mb-6 mt-1 text-xs text-ink/60">
           {mode === 'login' ? 'Log in to your account.' : 'Create your account.'}

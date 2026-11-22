@@ -69,7 +69,7 @@ export default function ItemPage({
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-6">
-      <button onClick={onBack} className="mb-6 flex items-center gap-1 text-sm"><ChevronLeft size={16} /> Back to catalog</button>
+      <button onClick={onBack} className="mb-6 flex items-center gap-1 text-sm"><ChevronLeft size={16} /> Back</button>
       <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
         <div className="aspect-[3/4] bg-white shadow-sm">
           {item.image_url && <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />}
@@ -163,7 +163,7 @@ export function SentPage({
   const row = (l: string, v: string) => <div className="flex justify-between"><span>{l}</span><b>{v}</b></div>
   return (
     <div className="mx-auto max-w-5xl px-6 py-6">
-      <button onClick={onBack} className="mb-8 flex items-center gap-1 text-sm"><ChevronLeft size={16} /> Back to catalog</button>
+      <button onClick={onBack} className="mb-8 flex items-center gap-1 text-sm"><ChevronLeft size={16} /> Back</button>
       <div className="mx-auto max-w-md rounded-sm bg-white p-6 text-sm shadow-md">
         <h1 className="mb-3 text-xl font-bold">Request Sent</h1>
         <p className="mb-4">The shop will confirm your reservation of <b>{item.name}</b>.</p>

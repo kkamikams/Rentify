@@ -56,6 +56,9 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
   const [itemId, setItemId] = useState('')
   const [sent, setSent] = useState({ start: '', end: '' })
   const [msgBranch, setMsgBranch] = useState<string | undefined>()
+  const [itemOrigin, setItemOrigin] = useState<'home' | 'catalog'>('catalog')
+  const [bookingsOrigin, setBookingsOrigin] = useState<View>('home')
+  const [messagesOrigin, setMessagesOrigin] = useState<View>('home')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -96,10 +99,34 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
   )
 
   const go = (v: View, c = 'All') => { setView(v); setCategory(c); window.scrollTo(0, 0) }
+  const openBookings = (origin: View) => {
+    setBookingsOrigin(origin)
+    setView('bookings')
+    window.scrollTo(0, 0)
+  }
+  const backFromBookings = () => {
+    setView(bookingsOrigin)
+    window.scrollTo(0, 0)
+  }
+  const openMessages = (origin: View, branchId?: string) => {
+    if (origin !== 'messages') setMessagesOrigin(origin)
+    setMsgBranch(branchId)
+    setView('messages')
+    window.scrollTo(0, 0)
+  }
+  const backFromMessages = () => {
+    setView(messagesOrigin)
+    window.scrollTo(0, 0)
+  }
   const open = (p: Product) => {
     const r = p.rows.find((x) => x.branches?.name === active) ?? p.rows[0]
+    setItemOrigin(view === 'home' ? 'home' : 'catalog')
     setItemId(r.id)
     setView('item')
+    window.scrollTo(0, 0)
+  }
+  const backFromItem = () => {
+    setView(itemOrigin)
     window.scrollTo(0, 0)
   }
   const item = cat.items.find((i) => i.id === itemId)
@@ -125,9 +152,9 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
           )}
           <div className="flex items-center gap-5">
             {name && <span className="hidden text-sm sm:inline">{name}</span>}
-            <button onClick={() => { setMsgBranch(undefined); go('messages') }} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
+            <button onClick={() => openMessages(view)} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
             <button onClick={onSignOut} title="Sign out" aria-label="Sign out"><User size={20} fill="currentColor" /></button>
-            <button onClick={() => go('bookings')} title="My bookings" aria-label="My bookings"><ShoppingBag size={20} fill="currentColor" /></button>
+            <button onClick={() => openBookings(view)} title="My bookings" aria-label="My bookings"><ShoppingBag size={20} fill="currentColor" /></button>
           </div>
         </div>
       </header>
@@ -205,7 +232,7 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
           branches={cat.branches}
           shop={cat.shops.find((s) => s.id === item.shop_id)}
           session={session}
-          onBack={() => go('catalog')}
+          onBack={backFromItem}
           onNeedAuth={() => {}}
           onSent={(start, end) => { setSent({ start, end }); setView('sent'); window.scrollTo(0, 0) }}
         />
@@ -213,15 +240,20 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
 
       {view === 'sent' && item && (
         <SentPage item={item} start={sent.start} end={sent.end}
-          onBack={() => go('catalog')} onBookings={() => go('bookings')} />
+          onBack={backFromItem} onBookings={() => openBookings('sent')} />
       )}
 
       {view === 'bookings' && (
-        <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
+        <MyBookingsPage onBack={backFromBookings} onMessage={(b) => openMessages('bookings', b)} />
       )}
 
       {view === 'messages' && session && (
-        <MessagesPage session={session} branches={cat.branches} initialBranch={msgBranch} />
+        <MessagesPage
+          session={session}
+          branches={cat.branches}
+          initialBranch={msgBranch}
+          onBack={backFromMessages}
+        />
       )}
     </div>
   )

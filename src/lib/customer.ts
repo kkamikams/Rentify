@@ -12,6 +12,7 @@ export type CBranch = { id: string; shop_id: string; name: string }
 export type CShop = { id: string; pay_number: string | null; pay_name: string | null }
 export type MyBooking = {
   id: string; item_id: string; start_date: string; end_date: string; status: string | null
+  customer_id: string
   payment_ref: string | null; payment_method: string | null; deposit_amount: number | null
   extension_requested: boolean; items: CItem | null
 }
@@ -22,7 +23,7 @@ export const CATEGORY_TABS: [string, string][] = [
 ]
 export const STATUS_LABEL: Record<string, string> = {
   pending: 'Awaiting confirmation', reserved: 'Reserved', out: 'Picked up', in_transit: 'Returned',
-  returned: 'Returned', cleaning: 'Returned', ready: 'Returned', cancelled: 'Cancelled',
+  returned: 'Returned', cleaning: 'Returned', ready: 'Returned', cancelled: 'Cancelled', canceled: 'Cancelled',
 }
 export const longDate = (s: string) => {
   const [y, m, d] = s.split('-').map(Number)
