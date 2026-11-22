@@ -20,7 +20,7 @@ export default function StatusBoardPage({ shop, branch }: { shop: Shop; branch: 
     <div className="grid auto-cols-[175px] grid-flow-col gap-3 overflow-x-auto pb-4">
       {COLS.map(([key, label]) => (
         <div key={key} className="border-r border-ink/20 pr-3">
-          <h3 className="mb-3 text-center text-base font-semibold">{label}</h3>
+          <h3 className="mb-3 text-center text-xl font-bold">{label}</h3>
           {mine.filter((b) => norm(b.status) === key).map((b) => (
             <div key={b.id} className="mb-3 rounded-sm bg-white p-3 text-center shadow-sm">
               <div className="mb-2 border-b border-ink/20 pb-1 text-xs font-semibold">{branchName(b)}</div>

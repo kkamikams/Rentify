@@ -59,14 +59,14 @@ export default function ShopApp({
     costs: <CostsPage {...p} />,
     reports: <ReportsPage {...p} />,
     rules: <RulesPage {...p} />,
-        messages: <ShopMessagesPage {...p} />,
+    messages: <ShopMessagesPage {...p} />,
   }
   const title = tab === 'messages' ? 'Messages' : TABS.find((t) => t.id === tab)!.title
 
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-t-4 border-ink bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <nav className="flex flex-1 justify-center gap-16">
             {multi ? (
               branchTabs.map((b) => (
@@ -92,7 +92,7 @@ export default function ShopApp({
       </header>
 
       <nav className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-8 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
           {TABS.map(({ id, icon: Icon, title }) => (
             <button key={id} title={title} aria-label={title} onClick={() => setTab(id)}
               className={`pb-1 ${tab === id ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
@@ -102,8 +102,8 @@ export default function ShopApp({
         </div>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-8 py-8">
-        <h1 className="mb-8 inline-block border-b border-ink/30 pb-1 pr-12 text-lg font-medium">{title}</h1>
+      <main className="mx-auto max-w-7xl px-8 py-8">
+        <h1 className="mb-8 inline-block border-b border-ink/30 pb-1 pr-12 text-xl font-medium">{title}</h1>
         {shop.error && <p className="mb-4 text-sm text-cleaning">{shop.error}</p>}
         {pages[tab]}
       </main>

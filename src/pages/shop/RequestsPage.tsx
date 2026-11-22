@@ -27,7 +27,7 @@ export default function RequestsPage({ shop, branch }: { shop: Shop; branch: str
         return (
           <section key={b.id} className={card}>
             <div className="mb-1 flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold">{x?.name}</h3>
+              <h3 className="text-xl font-bold">{x?.name}</h3>
               <Tag>{branchName(b)}</Tag>
               <Tag>New Request</Tag>
             </div>

@@ -4,8 +4,8 @@ import type { MyBooking } from '../../lib/customer'
 import { STATUS_LABEL } from '../../lib/customer'
 import { addDays, diffDays, fmt, norm, peso, today } from '../../lib/shop'
 
-const btnDark = 'w-full rounded-sm bg-booked px-4 py-2 text-xs font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]'
-const btnGrey = 'w-full rounded-sm bg-cell px-4 py-2 text-xs font-semibold text-ink shadow-[0_2px_3px_rgba(0,0,0,0.2)] disabled:opacity-60'
+const btnDark = 'w-full rounded-sm bg-booked px-4 py-2 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]'
+const btnGrey = 'w-full rounded-sm bg-cell px-4 py-2 text-sm font-semibold text-ink shadow-[0_2px_3px_rgba(0,0,0,0.2)] disabled:opacity-60'
 
 export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: string) => void }) {
   const [list, setList] = useState<MyBooking[]>([])
@@ -29,8 +29,8 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
 
   const now = today()
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
-      <h1 className="mb-5 text-base font-bold">My bookings ({list.length})</h1>
+    <div className="mx-auto max-w-6xl px-6 py-8">
+      <h1 className="mb-5 text-xl font-bold">My bookings ({list.length})</h1>
       {err && <p className="mb-3 text-sm text-cleaning">{err}</p>}
       {loading && <p className="text-sm text-ink/60">Loading...</p>}
       {!loading && list.length === 0 && <p className="text-sm text-ink/60">No bookings yet.</p>}
@@ -50,10 +50,10 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
             <div className="h-28 w-24 shrink-0 bg-cream">
               {x?.image_url && <img src={x.image_url} alt="" className="h-full w-full object-cover" />}
             </div>
-            <div className="min-w-[220px] flex-1 space-y-1 text-[10px]">
-              <div className="flex items-center gap-2 text-sm font-bold">
+            <div className="min-w-[220px] flex-1 space-y-1 text-sm">
+              <div className="flex items-center gap-2 text-xl font-bold">
                 {x?.name}
-                <span className="rounded-sm bg-reserved px-1.5 py-0.5 text-[9px] font-semibold">{STATUS_LABEL[st] ?? st}</span>
+                <span className="rounded-sm bg-reserved px-1.5 py-0.5 text-xs font-semibold">{STATUS_LABEL[st] ?? st}</span>
               </div>
               <p className="text-ink/60">Pickup {fmt(b.start_date)} · Return by <b className="text-ink">{fmt(b.end_date)}</b></p>
               {when && <p>{when}</p>}

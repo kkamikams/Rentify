@@ -61,7 +61,7 @@ export default function ShopMessagesPage({ shop, branch }: { shop: Shop; branch:
 
   return (
     <div className="grid gap-5 md:grid-cols-[250px_1fr]">
-      <aside className="h-fit rounded-sm bg-white p-4 shadow-md">
+      <aside className="h-[420px] overflow-y-auto rounded-sm bg-white p-4 shadow-md">
         <h2 className="mb-3 border-b border-ink/20 pb-3 text-lg font-bold">Messages</h2>
         {convs.length === 0 && <p className="text-xs text-ink/50">No messages yet.</p>}
         {convs.map((c) => (
@@ -77,7 +77,7 @@ export default function ShopMessagesPage({ shop, branch }: { shop: Shop; branch:
         ))}
       </aside>
 
-      <section className="flex min-h-[420px] flex-col rounded-sm bg-white shadow-md">
+      <section className="flex h-[420px] flex-col rounded-sm bg-white shadow-md">
         <header className="border-b border-ink/20 p-4 text-base font-semibold">
           {cur ? nameOf(cur.last.customer_id) : 'Select a conversation'}
         </header>

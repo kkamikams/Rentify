@@ -22,7 +22,7 @@ export default function ReportsPage({ shop, branch }: { shop: Shop; branch: stri
         <Stat label="Pending requests" value={pending} />
       </div>
       <section className={card}>
-        <h3 className="mb-3 text-base font-semibold">Most Rented Items</h3>
+        <h3 className="mb-3 text-xl font-bold">Most Rented Items</h3>
         <table className="w-full">
           <thead><tr><th className={th}>Item</th><th className={th}>Bookings</th></tr></thead>
           <tbody>

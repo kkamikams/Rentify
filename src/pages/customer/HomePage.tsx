@@ -7,7 +7,7 @@ const TILES: [string, string][] = [
 
 const Heading = ({ children }: { children: string }) => (
   <div className="mb-8 text-center">
-    <h2 className="text-sm font-medium tracking-wide">{children}</h2>
+    <h2 className="text-xl font-bold tracking-wide">{children}</h2>
     <div className="mx-auto mt-1 h-px w-24 bg-ink" />
   </div>
 )
@@ -32,9 +32,9 @@ export default function HomePage({
               Rent it with{' '}
               <span style={{ fontFamily: "'Great Vibes', cursive" }} className="text-4xl font-normal">Rentify.</span>
             </h1>
-            <p className="mt-4 text-xs">Find your perfect outfit for every occasion.</p>
+            <p className="mt-4 text-sm">Find your perfect outfit for every occasion.</p>
             <button onClick={onBrowse}
-              className="mt-6 rounded-sm bg-ink px-5 py-2.5 text-xs font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
+              className="mt-6 rounded-sm bg-ink px-5 py-2.5 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
               Browse Rentals →
             </button>
           </div>
@@ -54,7 +54,7 @@ export default function HomePage({
                 className="flex h-52 flex-col justify-end rounded-sm bg-white bg-cover bg-center p-3 shadow-md"
                 style={img ? { backgroundImage: `url(${img})` } : undefined}>
                 <button onClick={() => onCategory(value)}
-                  className="w-full rounded-sm bg-booked py-2 text-xs font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
+                  className="w-full rounded-sm bg-booked py-2 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
                   {label}
                 </button>
               </div>
@@ -74,7 +74,7 @@ export default function HomePage({
       </section>
 
       <footer className="bg-[#46352E] text-white">
-        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-10 text-xs sm:grid-cols-2">
+        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-10 text-sm sm:grid-cols-2">
           <div className="space-y-4">
             <div className="text-sm font-semibold">Rentify.</div>
             <button className="block" onClick={onBrowse}>Search</button>

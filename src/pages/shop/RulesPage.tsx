@@ -1,7 +1,15 @@
 import { supabase } from '../../lib/supabaseClient'
 import type { Shop } from '../../lib/shop'
 import { CATEGORIES, income, inBranch, branchName, isSold, peso } from '../../lib/shop'
-import { card, input, Sub, td, th } from '../../lib/ui'
+import { input } from '../../lib/ui'
+
+// Sizes for this page, matched to the design
+const section = 'mb-8 rounded-sm bg-white px-8 py-6 shadow-md'
+const h = 'text-xl font-bold leading-tight'
+const sub = 'text-xs text-ink/50'
+const th = 'pb-2 text-left text-xs font-semibold'
+const td = 'border-t border-ink/15 py-2 text-sm'
+const field = `${input} h-9 w-full text-sm`
 
 export default function RulesPage({ shop, branch }: { shop: Shop; branch: string }) {
   const rule = (c: string) => shop.rules.find((r) => r.category === c) ?? { category: c, buffer_days: 2, deposit: 0 }
@@ -15,23 +23,26 @@ export default function RulesPage({ shop, branch }: { shop: Shop; branch: string
 
   return (
     <div>
-      <section className={card}>
-        <h3 className="text-base font-semibold">Rules per clothing type</h3>
-        <Sub>Default for new items. Change an item's own values in Inventory.</Sub>
-        <table className="mt-6 w-full">
+      <section className={section}>
+        <h3 className={h}>Rules per clothing type</h3>
+        <p className={`${sub} mb-5`}>Default for new items. Change an item's own values in Inventory.</p>
+        <table className="w-full">
           <thead><tr><th className={th}>Item</th><th className={th}>Buffer Days</th><th className={th}>Deposit</th></tr></thead>
           <tbody>
             {CATEGORIES.map((c) => (
               <tr key={c}>
                 <td className={td}>{c}</td>
                 <td className={td}>
-                  <select className={`${input} w-28`} value={rule(c).buffer_days} onChange={(e) => save(c, { buffer_days: Number(e.target.value) })}>
-                    {[0, 1, 2, 3, 4, 5].map((n) => <option key={n}>{n}</option>)}
-                  </select>
+                  <div className="w-48">
+                    <input type="number" min={0} max={30} className={field} key={`b${c}${rule(c).buffer_days}`}
+                      defaultValue={rule(c).buffer_days} onBlur={(e) => save(c, { buffer_days: Number(e.target.value) || 0 })} />
+                  </div>
                 </td>
                 <td className={td}>
-                  <input type="number" min={0} className={`${input} w-28`} key={`${c}${rule(c).deposit}`}
-                    defaultValue={rule(c).deposit} onBlur={(e) => save(c, { deposit: Number(e.target.value) || 0 })} />
+                  <div className="w-48">
+                    <input type="number" min={0} className={field} key={`${c}${rule(c).deposit}`}
+                      defaultValue={rule(c).deposit} onBlur={(e) => save(c, { deposit: Number(e.target.value) || 0 })} />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -39,10 +50,10 @@ export default function RulesPage({ shop, branch }: { shop: Shop; branch: string
         </table>
       </section>
 
-      <section className={card}>
-        <h3 className="text-base font-semibold">Sales tracker</h3>
-        <Sub>Optional extra. Rental income from the bookings.</Sub>
-        <table className="mt-6 w-full">
+      <section className={section}>
+        <h3 className={h}>Sales tracker</h3>
+        <p className={`${sub} mb-5`}>Optional extra. Rental income from the bookings.</p>
+        <table className="w-full">
           <thead><tr><th className={th}>Item</th><th className={th}>Income</th></tr></thead>
           <tbody>
             {sales.map(([c, a]) => <tr key={c}><td className={td}>{c}</td><td className={td}>{peso(a)}</td></tr>)}

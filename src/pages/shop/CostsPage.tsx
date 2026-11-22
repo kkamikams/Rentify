@@ -42,7 +42,7 @@ export default function CostsPage({ shop, branch }: { shop: Shop; branch: string
       </div>
 
       <section className={card}>
-        <h3 className="mb-3 text-sm font-semibold">Branches compared</h3>
+        <h3 className="mb-3 text-xl font-bold">Branches compared</h3>
         <table className="w-full">
           <thead><tr>{['Branch', 'Income', 'Costs', 'Profit'].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
           <tbody>
@@ -57,7 +57,7 @@ export default function CostsPage({ shop, branch }: { shop: Shop; branch: string
       </section>
 
       <section className={card}>
-        <h3 className="mb-3 text-base font-semibold">Add a cost</h3>
+        <h3 className="mb-3 text-xl font-bold">Add a cost</h3>
         <form onSubmit={add} className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <select className={input} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
             {CATS.map((c) => <option key={c}>{c}</option>)}
@@ -74,7 +74,7 @@ export default function CostsPage({ shop, branch }: { shop: Shop; branch: string
       </section>
 
       <section className={card}>
-        <h3 className="mb-3 text-base font-semibold">Costs by category</h3>
+        <h3 className="mb-3 text-xl font-bold">Costs by category</h3>
         <table className="w-full">
           <thead><tr><th className={th}>Category</th><th className={th}>Amount</th></tr></thead>
           <tbody>
@@ -85,7 +85,7 @@ export default function CostsPage({ shop, branch }: { shop: Shop; branch: string
       </section>
 
       <section className={card}>
-        <h3 className="text-base font-semibold">Profit per item</h3>
+        <h3 className="text-xl font-bold">Profit per item</h3>
         <Sub>Costs set for a whole branch or the shop are not split across items.</Sub>
         <table className="mt-6 w-full">
           <thead><tr>{['Item', 'Income', 'Costs', 'Profit'].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>

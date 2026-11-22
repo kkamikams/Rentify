@@ -40,7 +40,7 @@ export default function TodayPage({ shop, branch }: { shop: Shop; branch: string
     <div>
       {groups.map((g) => (
         <section key={g.title} className={card}>
-          <h3 className="mb-3 text-base font-semibold">{g.title}</h3>
+          <h3 className="mb-3 text-xl font-bold">{g.title}</h3>
           {g.list.length === 0 && <p className="text-xs text-ink/60">Nothing here.</p>}
           {g.list.map((b) => (
             <div key={b.id} className="flex items-center justify-between py-1.5">
