@@ -121,7 +121,9 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       const { error: insertError } = await supabase.from('items').insert({
         shop_id: shop.shopId, name: f.name.trim(), category: f.category,
         branch_id: f.branch_id || shop.branches[0]?.id, price_per_day: Number(f.price) || 0,
-        deposit: Number(f.deposit) || rule?.deposit || 0, inclusions: f.inclusions.trim() || null,
+        deposit: Number(f.deposit) || rule?.deposit || 0,
+        late_fee_per_day: rule?.late_fee_per_day ?? 0,
+        inclusions: f.inclusions.trim() || null,
         size_info: f.sizes.trim() || null, buffer_days: rule?.buffer_days ?? 2, image_url: imageUrl,
       })
       if (insertError) {

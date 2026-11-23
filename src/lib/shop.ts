@@ -18,7 +18,7 @@ export type Cost = {
   id: string; branch_id: string | null; item_id: string | null
   category: string; description: string | null; amount: number
 }
-export type Rule = { category: string; buffer_days: number; deposit: number }
+export type Rule = { category: string; buffer_days: number; deposit: number; late_fee_per_day: number }
 export type Branch = { id: string; name: string }
 export type Shop = ReturnType<typeof useShop>
 

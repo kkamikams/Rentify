@@ -12,7 +12,7 @@ const td = 'border-t border-ink/15 py-2 text-sm'
 const field = `${input} h-9 w-full text-sm`
 
 export default function RulesPage({ shop, branch }: { shop: Shop; branch: string }) {
-  const rule = (c: string) => shop.rules.find((r) => r.category === c) ?? { category: c, buffer_days: 2, deposit: 0 }
+  const rule = (c: string) => shop.rules.find((r) => r.category === c) ?? { category: c, buffer_days: 2, deposit: 0, late_fee_per_day: 0 }
   const save = (c: string, patch: object) =>
     shop.act(
       supabase.from('type_rules').upsert({ ...rule(c), ...patch, shop_id: shop.shopId }, { onConflict: 'shop_id,category' })
@@ -27,7 +27,7 @@ export default function RulesPage({ shop, branch }: { shop: Shop; branch: string
         <h3 className={h}>Rules per clothing type</h3>
         <p className={`${sub} mb-5`}>Default for new items. Change an item's own values in Inventory.</p>
         <table className="w-full">
-          <thead><tr><th className={th}>Item</th><th className={th}>Buffer Days</th><th className={th}>Deposit</th></tr></thead>
+          <thead><tr><th className={th}>Item</th><th className={th}>Buffer Days</th><th className={th}>Late fee/day</th></tr></thead>
           <tbody>
             {CATEGORIES.map((c) => (
               <tr key={c}>
@@ -40,8 +40,8 @@ export default function RulesPage({ shop, branch }: { shop: Shop; branch: string
                 </td>
                 <td className={td}>
                   <div className="w-48">
-                    <input type="number" min={0} className={field} key={`${c}${rule(c).deposit}`}
-                      defaultValue={rule(c).deposit} onBlur={(e) => save(c, { deposit: Number(e.target.value) || 0 })} />
+                    <input type="number" min={0} className={field} key={`${c}${rule(c).late_fee_per_day}`}
+                      defaultValue={rule(c).late_fee_per_day} onBlur={(e) => save(c, { late_fee_per_day: Number(e.target.value) || 0 })} />
                   </div>
                 </td>
               </tr>

@@ -15,6 +15,7 @@ export default function MyBookingsPage({
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
   const [cancellingId, setCancellingId] = useState('')
+  const [confirmingCancelId, setConfirmingCancelId] = useState('')
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -32,8 +33,6 @@ export default function MyBookingsPage({
   }
 
   const cancelBooking = async (booking: MyBooking) => {
-    if (!window.confirm('Cancel this booking?')) return
-
     setErr('')
     setCancellingId(booking.id)
     const { data: { session } } = await supabase.auth.getSession()
@@ -51,6 +50,7 @@ export default function MyBookingsPage({
       .in('status', ['pending', 'reserved'])
 
     setCancellingId('')
+    setConfirmingCancelId('')
     if (error) setErr(error.message)
     else await load()
   }
@@ -108,13 +108,34 @@ export default function MyBookingsPage({
             <div className="w-44 space-y-2">
               <button className={btnDark} onClick={() => onMessage(x?.branch_id ?? undefined)}>Message {x?.branches?.name}</button>
               {(st === 'pending' || st === 'reserved') && (
-                <button
-                  className={btnGrey}
-                  disabled={cancellingId === b.id}
-                  onClick={() => cancelBooking(b)}
-                >
-                  {cancellingId === b.id ? 'Cancelling...' : 'Cancel booking'}
-                </button>
+                confirmingCancelId === b.id ? (
+                  <div className="rounded-sm border border-ink/15 bg-cream p-3">
+                    <p className="mb-2 text-xs font-semibold">Cancel this booking?</p>
+                    <div className="flex gap-2">
+                      <button
+                        className="flex-1 rounded-sm border border-ink/20 bg-white px-2 py-1.5 text-xs font-semibold"
+                        onClick={() => setConfirmingCancelId('')}
+                        disabled={cancellingId === b.id}
+                      >
+                        Keep
+                      </button>
+                      <button
+                        className="flex-1 rounded-sm bg-cleaning px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                        onClick={() => cancelBooking(b)}
+                        disabled={cancellingId === b.id}
+                      >
+                        {cancellingId === b.id ? 'Cancelling...' : 'Cancel'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className={btnGrey}
+                    onClick={() => setConfirmingCancelId(b.id)}
+                  >
+                    Cancel booking
+                  </button>
+                )
               )}
               {st === 'out' && (
                 <button className={btnGrey} disabled={b.extension_requested} onClick={() => run('request_extension', b.id)}>
