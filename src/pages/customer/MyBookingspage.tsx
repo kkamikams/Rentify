@@ -54,6 +54,21 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
         return
       }
 
+      const { data: updated, error: verifyError } = await supabase
+        .from('bookings')
+        .select('status')
+        .eq('id', confirmingCancelId)
+        .maybeSingle()
+      if (verifyError) {
+        setErr(verifyError.message)
+        return
+      }
+      if (!updated || !['cancelled', 'canceled'].includes(norm(updated.status))) {
+        setErr('This booking could not be cancelled. It may have already been confirmed by the shop.')
+        await load()
+        return
+      }
+
       setList((current) =>
         current.map((booking) =>
           booking.id === confirmingCancelId ? { ...booking, status: 'cancelled' } : booking

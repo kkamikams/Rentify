@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Shop } from '../../lib/shop'
 import { branchName, clash, fmt, inBranch, nights, norm, peso, rental } from '../../lib/shop'
@@ -13,11 +13,39 @@ const REASONS = [
 
 export default function RequestsPage({ shop, branch }: { shop: Shop; branch: string }) {
   const [reason, setReason] = useState<Record<string, string>>({})
+  const [requestError, setRequestError] = useState('')
+  const [updatingId, setUpdatingId] = useState('')
   const list = shop.bookings.filter((b) => norm(b.status) === 'pending' && inBranch(branch, branchName(b)))
-  const update = (id: string, patch: object) => shop.act(supabase.from('bookings').update(patch).eq('id', id))
+  const reload = shop.reload
+
+  useEffect(() => {
+    const timer = setInterval(() => { void reload() }, 8000)
+    return () => clearInterval(timer)
+  }, [reload])
+
+  async function updateRequest(id: string, patch: object) {
+    if (updatingId) return
+    setUpdatingId(id)
+    setRequestError('')
+    try {
+      const { data, error } = await supabase.from('bookings')
+        .update(patch).eq('id', id).eq('status', 'pending').select('id')
+      if (error) {
+        setRequestError(error.message)
+      } else if (!data?.length) {
+        setRequestError('This request was already cancelled or updated.')
+      }
+      await reload()
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Could not update this request.')
+    } finally {
+      setUpdatingId('')
+    }
+  }
 
   return (
     <div>
+      {requestError && <p role="alert" className="mb-3 text-sm text-cleaning">{requestError}</p>}
       <Sub>Requests sent from the customer site land here. Confirm to reserve the dates, or decline.</Sub>
       {list.length === 0 && <p className="text-sm text-ink/60">No new requests.</p>}
       {list.map((b) => {
@@ -64,10 +92,13 @@ export default function RequestsPage({ shop, branch }: { shop: Shop; branch: str
               <p>Remind them to bring a valid ID.</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <button className={btn} disabled={!!c} onClick={() => update(b.id, { status: 'reserved' })}>Confirm</button>
+              <button className={btn} disabled={!!c || !!updatingId} onClick={() => updateRequest(b.id, { status: 'reserved' })}>
+                {updatingId === b.id ? 'Updating…' : 'Confirm'}
+              </button>
               <button
                 className={btn2}
-                onClick={() => update(b.id, { status: 'cancelled', decline_reason: reason[b.id] ?? REASONS[0] })}
+                disabled={!!updatingId}
+                onClick={() => updateRequest(b.id, { status: 'cancelled', decline_reason: reason[b.id] ?? REASONS[0] })}
               >
                 Decline
               </button>
