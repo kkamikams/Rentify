@@ -8,7 +8,7 @@ import { Tag } from '../lib/ui'
 import { useCatalog } from '../lib/customer'
 import type { CItem } from '../lib/customer'
 import ItemPage, { SentPage } from './customer/ItemPage'
-import MyBookingsPage from './customer/MyBookingsPage'
+import MyBookingsPage from './customer/MyBookingspage'
 import MessagesPage from './customer/MessagesPage'
 import ProfilePage, { AccountLayout } from './customer/ProfilePage'
 
@@ -282,6 +282,12 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
 
       {view === 'catalog' && (
         <main className="mx-auto max-w-6xl px-6 py-8">
+          <div className="mb-4">
+            <button onClick={() => go('home')} aria-label="Back to home page"
+              title="Back to home page" className="flex items-center text-sm font-medium hover:underline">
+              <ArrowLeft size={18} />
+            </button>
+          </div>
           <nav className="mb-4 flex justify-center gap-8 text-sm font-medium">
             {['All', ...CATS].map((c) => (
               <button key={c} onClick={() => setCategory(c)}
