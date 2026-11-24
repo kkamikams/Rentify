@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { MyBooking } from '../../lib/customer'
 import { addDays, diffDays, fmt, norm, peso, today } from '../../lib/shop'
@@ -19,7 +19,11 @@ const btnGrey = 'w-full rounded-sm bg-cell px-4 py-2 text-xs font-semibold text-
 export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: string) => void }) {
   const [list, setList] = useState<MyBooking[]>([])
   const [err, setErr] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(true)
+  const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+  const cancelInFlight = useRef(false)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -30,16 +34,47 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
   }, [])
   useEffect(() => { load() }, [load])
 
-  const run = async (fn: 'cancel_booking' | 'request_extension', id: string) => {
+  const run = async (fn: 'request_extension', id: string) => {
     const { error } = await supabase.rpc(fn, { p_id: id })
     if (error) setErr(error.message)
     else load()
+  }
+
+  const confirmCancellation = async () => {
+    if (!confirmingCancelId || cancelInFlight.current) return
+
+    cancelInFlight.current = true
+    setCancelling(true)
+    setErr('')
+    setSuccess('')
+    try {
+      const { error } = await supabase.rpc('cancel_booking', { p_id: confirmingCancelId })
+      if (error) {
+        setErr(error.message)
+        return
+      }
+
+      setList((current) =>
+        current.map((booking) =>
+          booking.id === confirmingCancelId ? { ...booking, status: 'cancelled' } : booking
+        )
+      )
+      setConfirmingCancelId(null)
+      setSuccess('Booking cancelled successfully.')
+      await load()
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : 'Could not cancel booking. Please try again.')
+    } finally {
+      cancelInFlight.current = false
+      setCancelling(false)
+    }
   }
 
   const now = today()
   return (
     <div>
       {err && <p className="mb-3 text-sm text-cleaning">{err}</p>}
+      {success && <p role="status" className="mb-3 text-sm text-green-800">{success}</p>}
       {loading && <p className="text-sm text-ink/60">Loading...</p>}
       {!loading && list.length === 0 && <p className="text-sm text-ink/60">No bookings yet.</p>}
       {list.map((b) => {
@@ -79,7 +114,9 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
             <div className="w-44 space-y-2">
               <button className={btnDark} onClick={() => onMessage(x?.branch_id ?? undefined)}>Message {x?.branches?.name}</button>
               {(st === 'pending' || st === 'reserved') && (
-                <button className={btnGrey} onClick={() => run('cancel_booking', b.id)}>Cancel booking</button>
+                <button className={btnGrey} onClick={() => { setErr(''); setSuccess(''); setConfirmingCancelId(b.id) }}>
+                  Cancel booking
+                </button>
               )}
               {st === 'out' && (
                 <button className={btnGrey} disabled={b.extension_requested} onClick={() => run('request_extension', b.id)}>
@@ -90,6 +127,40 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
           </section>
         )
       })}
+      {confirmingCancelId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-booking-title"
+            aria-describedby="cancel-booking-message"
+            className="w-full max-w-md rounded-sm bg-white p-6 shadow-xl"
+          >
+            <h2 id="cancel-booking-title" className="text-xl font-bold text-ink">Cancel Booking?</h2>
+            <p id="cancel-booking-message" className="mb-6 mt-3 text-sm text-ink/70">
+              Are you sure you want to cancel this booking? This action cannot be undone.
+            </p>
+            <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+              <button
+                type="button"
+                className="rounded-sm bg-cell px-4 py-2 text-sm font-semibold text-ink disabled:opacity-60"
+                onClick={() => setConfirmingCancelId(null)}
+                disabled={cancelling}
+              >
+                Keep Booking
+              </button>
+              <button
+                type="button"
+                className="rounded-sm bg-booked px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                onClick={() => void confirmCancellation()}
+                disabled={cancelling}
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel Booking'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
