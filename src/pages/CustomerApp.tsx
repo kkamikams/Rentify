@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowLeft, MessageCircle, ShoppingBag, User } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { peso } from '../lib/shop'
 import { Tag } from '../lib/ui'
 import { useCatalog } from '../lib/customer'
 import type { CItem } from '../lib/customer'
+import CustomerHeader from '../components/CustomerHeader'
 import ItemPage, { SentPage } from './customer/ItemPage'
 import MyBookingsPage from './customer/MyBookingspage'
 import MessagesPage from './customer/MessagesPage'
-import ProfilePage, { AccountLayout } from './customer/ProfilePage'
+import ProfilePage from './customer/ProfilePage'
 
 type Product = { name: string; category: string | null; price: number; deposit: number; branches: string[]; rows: CItem[] }
 type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages' | 'profile'
@@ -198,42 +199,19 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
         </div>
       )}
 
-      <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <button onClick={() => go('home')} aria-label="Rentify home" className="text-xl font-semibold">Rentify.</button>
-          {multi && !account && (
-            <nav className="flex gap-10 text-sm font-medium">
-              {['All branches', ...branchNames].map((b) => (
-                <button key={b} onClick={() => { setBranch(b); go('catalog') }}
-                  className={`pb-0.5 ${view === 'catalog' && active === b ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
-                  {b}
-                </button>
-              ))}
-            </nav>
-          )}
-          <div className="flex items-center gap-5">
-            {name && !account && <span className="hidden text-sm sm:inline">{name}</span>}
-            {!account && (
-              <button onClick={() => { setMsgBranch(undefined); go('messages') }} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
-            )}
-            <button onClick={() => go('profile')} title="My profile" aria-label="My profile"><User size={20} fill="currentColor" /></button>
-            {!account && (
-              <button onClick={() => go('bookings')} title="My bookings" aria-label="My bookings">
-                <ShoppingBag size={20} fill="currentColor" />
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+      <CustomerHeader
+        name={name}
+        showBranches={multi && !account}
+        branch={view === 'catalog' ? active : ''}
+        branchNames={branchNames}
+        activeAccountPage={view === 'profile' || view === 'bookings' ? view : undefined}
+        onHome={() => go('home')}
+        onBranchChange={(b) => { setBranch(b); go('catalog') }}
+        onMessages={() => { setMsgBranch(undefined); go('messages') }}
+        onProfile={() => go('profile')}
+        onBookings={() => go('bookings')}
+      />
 
-      {account && (
-        <div className="mx-auto max-w-6xl px-6 pt-4">
-          <button onClick={() => go('home')} aria-label="Back to home page"
-            title="Back to home page" className="flex items-center text-sm font-medium hover:underline">
-            <ArrowLeft size={18} />
-          </button>
-        </div>
-      )}
       {session && <CustomerProfileSetup key={session.user.id} user={session.user} />}
 
       {cat.error && <p className="px-6 pt-4 text-sm text-cleaning">{cat.error}</p>}
@@ -327,15 +305,11 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
       )}
 
       {view === 'profile' && session && (
-        <AccountLayout tab="profile" onTab={(t) => go(t)}>
-          <ProfilePage session={session} onSignOut={onSignOut} />
-        </AccountLayout>
+        <ProfilePage session={session} onSignOut={onSignOut} />
       )}
 
       {view === 'bookings' && (
-        <AccountLayout tab="bookings" onTab={(t) => go(t)}>
-          <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
-        </AccountLayout>
+        <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
       )}
 
       {view === 'messages' && session && (
