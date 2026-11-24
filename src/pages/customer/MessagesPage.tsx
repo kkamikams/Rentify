@@ -3,13 +3,13 @@ import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { ArrowLeft, User } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
-import type { CBranch, Msg } from '../../lib/customer'
+import type { CBranch, CShop, Msg } from '../../lib/customer'
 
 const time = (s: string) => new Date(s).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
 
 export default function MessagesPage({
-  session, branches, initialBranch, onBack,
-}: { session: Session; branches: CBranch[]; initialBranch?: string; onBack: () => void }) {
+  session, branches, shops, initialBranch, onBack,
+}: { session: Session; branches: CBranch[]; shops: CShop[]; initialBranch?: string; onBack: () => void }) {
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [sel, setSel] = useState(initialBranch ?? '')
   const [text, setText] = useState('')
@@ -27,6 +27,7 @@ export default function MessagesPage({
   }, [load])
 
   const cur = branches.find((b) => b.id === sel) ?? branches[0]
+  const shopName = cur ? shops.find((shop) => shop.id === cur.shop_id)?.name ?? cur.name : ''
   const thread = msgs.filter((m) => m.branch_id === cur?.id)
 
   async function send(e: FormEvent) {
@@ -49,8 +50,8 @@ export default function MessagesPage({
             <button key={b.id} onClick={() => setSel(b.id)}
               className={`mb-1 flex w-full items-center gap-3 rounded-sm p-2 text-left ${cur?.id === b.id ? 'bg-cream' : ''}`}>
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-reserved"><User size={16} /></span>
-              <span className="min-w-0 text-xs">
-                <span className="block text-sm font-semibold">{b.name}</span>
+              <span className="min-w-0 text-sm">
+                <span className="block text-sm font-semibold">{shops.find((shop) => shop.id === b.shop_id)?.name ?? b.name}</span>
                 <span className="block truncate text-ink/60">{last?.body ?? 'No messages yet'}</span>
               </span>
             </button>
@@ -69,14 +70,14 @@ export default function MessagesPage({
             <ArrowLeft size={20} />
           </button>
           <span className="grid h-10 w-10 place-items-center rounded-full bg-reserved"><User size={18} /></span>
-          <span className="text-xl font-bold">{cur?.name}</span>
+          <span className="text-xl font-bold">{shopName}</span>
         </header>
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
           {thread.map((m, i) => {
             const gap = i === 0 || new Date(m.created_at).getTime() - new Date(thread[i - 1].created_at).getTime() > 3600000
             return (
               <div key={m.id} className="flex flex-col gap-3">
-                {gap && <div className="text-center text-xs text-ink/50">{time(m.created_at)}</div>}
+                {gap && <div className="text-center text-sm text-ink/50">{time(m.created_at)}</div>}
                 <div className={`max-w-[70%] rounded-xl px-3 py-2 text-sm ${
                   m.sender === 'customer' ? 'self-end bg-booked text-white' : 'self-start bg-reserved'}`}>
                   {m.body}
@@ -84,9 +85,9 @@ export default function MessagesPage({
               </div>
             )
           })}
-          {thread.length === 0 && <p className="m-auto text-sm text-ink/50">Say hi to {cur?.name}.</p>}
+          {thread.length === 0 && <p className="m-auto text-sm text-ink/50">Say hi to {shopName}.</p>}
         </div>
-        {err && <p className="px-4 text-xs text-cleaning">{err}</p>}
+        {err && <p className="px-4 text-sm text-cleaning">{err}</p>}
         <form onSubmit={send} className="flex gap-3 p-4">
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a message"
             className="flex-1 rounded-md border border-ink/40 bg-white px-3 py-2 text-sm" />

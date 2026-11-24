@@ -43,10 +43,10 @@ export default function TodayPage({ shop, branch }: { shop: Shop; branch: string
       {groups.map((g) => (
         <section key={g.title} className={card}>
           <h3 className="mb-3 text-xl font-bold">{g.title}</h3>
-          {g.list.length === 0 && <p className="text-xs text-ink/60">Nothing here.</p>}
+          {g.list.length === 0 && <p className="text-sm text-ink/60">Nothing here.</p>}
           {g.list.map((b) => (
             <div key={b.id} className="flex items-center justify-between py-1.5">
-              <div className="text-xs">
+              <div className="text-sm">
                 <div className="flex items-center gap-2 font-semibold">{b.items?.name} <Tag>{branchName(b)}</Tag></div>
                 <div className="font-semibold">{b.customer_name}</div>
                 <div className={g.red ? 'text-cleaning' : ''}>{g.line(b)}</div>
@@ -61,7 +61,7 @@ export default function TodayPage({ shop, branch }: { shop: Shop; branch: string
                     {simulatedReminders[b.id] ? 'Reminder simulated' : 'Simulate Reminder'}
                   </button>
                   {simulatedReminders[b.id] && (
-                    <p className="mt-1 text-xs text-ink/60" role="status">Simulation only — no SMS was sent.</p>
+                    <p className="mt-1 text-sm text-ink/60" role="status">Simulation only — no SMS was sent.</p>
                   )}
                 </div>
               )}

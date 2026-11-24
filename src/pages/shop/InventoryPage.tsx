@@ -150,7 +150,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
   return (
     <div>
       <Sub>Edit photo, price, deposit, branch and sizes. Text changes save when you leave a field. Photos save as soon as you pick a file.</Sub>
-      {photoError && <p className="mb-3 text-xs text-cleaning">{photoError}</p>}
+      {photoError && <p className="mb-3 text-sm text-cleaning">{photoError}</p>}
       <section className={`${card} overflow-x-auto`}>
         <table className="w-full min-w-[1100px]">
           <thead><tr className="h-14">
@@ -161,13 +161,13 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
               const img = imageOf(i)
               const busy = photoBusy === i.id
               return (
-                <tr key={i.id} className="h-20">
+                <tr key={i.id} className="h-24">
                   <td className={td}>
                     <div className="flex items-center gap-2">
-                      <div className="h-16 w-12 shrink-0 overflow-hidden bg-cell">
+                      <div className="h-20 w-16 shrink-0 overflow-hidden bg-cell">
                         {img && <img src={img} alt={i.name} className="h-full w-full object-cover" />}
                       </div>
-                      <div className="flex flex-col gap-1 text-[10px]">
+                      <div className="flex flex-col gap-1 text-sm">
                         <label className="cursor-pointer font-semibold underline">
                           {busy ? 'Uploading…' : img ? 'Change' : 'Add photo'}
                           <input
@@ -215,7 +215,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
             })}
           </tbody>
         </table>
-        {list.length === 0 && <p className="pt-3 text-xs text-ink/60">No items yet.</p>}
+        {list.length === 0 && <p className="pt-3 text-sm text-ink/60">No items yet.</p>}
       </section>
 
       <section className={card}>
@@ -235,23 +235,23 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
             placeholder={'Sizes (one per line), e.g.\nBust: 93 cm / 37 in\nWaist: 73 cm / 29 in'}
             value={f.sizes} onChange={(e) => set('sizes', e.target.value)} />
           <div className="col-span-2 flex items-center gap-4 sm:col-span-4">
-            <div className="h-24 w-[72px] shrink-0 overflow-hidden bg-cell">
+            <div className="h-48 w-36 shrink-0 overflow-hidden bg-cell">
               {preview && <img src={preview} alt="Preview" className="h-full w-full object-cover" />}
             </div>
-            <label className="text-xs">
+            <label className="text-sm">
               Item photo (optional, max {MAX_MB} MB)
               <input
                 type="file"
                 accept="image/*"
-                className="mt-1 block w-full text-xs"
+                className="mt-1 block w-full text-sm"
                 onChange={(e) => setImage(e.target.files?.[0] ?? null)}
               />
               {image && (
-                <button type="button" className="mt-1 text-[10px] underline" onClick={() => setImage(null)}>Clear photo</button>
+                <button type="button" className="mt-1 text-sm underline" onClick={() => setImage(null)}>Clear photo</button>
               )}
             </label>
           </div>
-          {addError && <p className="col-span-2 text-xs text-cleaning sm:col-span-4">{addError}</p>}
+          {addError && <p className="col-span-2 text-sm text-cleaning sm:col-span-4">{addError}</p>}
           <div className="col-span-2 sm:col-span-4">
             <button className={btn} type="submit" disabled={adding}>{adding ? 'Adding…' : 'Add item'}</button>
           </div>

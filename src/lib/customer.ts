@@ -9,7 +9,7 @@ export type CItem = {
   branches: { name: string } | null
 }
 export type CBranch = { id: string; shop_id: string; name: string }
-export type CShop = { id: string; pay_number: string | null; pay_name: string | null }
+export type CShop = { id: string; name: string; pay_number: string | null; pay_name: string | null }
 export type MyBooking = {
   id: string; item_id: string; start_date: string; end_date: string; status: string | null
   customer_id: string
@@ -42,7 +42,7 @@ export function useCatalog() {
       const [i, b, s] = await Promise.all([
         supabase.from('items').select('*, branches(name)').order('name'),
         supabase.from('branches').select('id, shop_id, name').order('name'),
-        supabase.from('shops').select('id, pay_number, pay_name'),
+        supabase.from('shops').select('id, name, pay_number, pay_name'),
       ])
       setError(i.error?.message ?? b.error?.message ?? s.error?.message ?? '')
       setItems((i.data ?? []) as unknown as CItem[])

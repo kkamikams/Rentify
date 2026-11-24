@@ -11,6 +11,7 @@ export type Booking = {
   id: string; shop_id: string; item_id: string
   customer_name: string | null; customer_phone: string | null
   start_date: string; end_date: string; status: string | null
+  buffer_days: number | null
   note: string | null; payment_ref: string | null; deposit_amount: number | null
   late_fee: number | null; items: Item | null
 }
@@ -52,11 +53,12 @@ export const inBranch = (branch: string, name?: string) => branch === 'All branc
 
 // Another confirmed booking of the same item that overlaps these dates or their cleaning days
 export function clash(b: Booking, all: Booking[]) {
-  const buf = b.items?.buffer_days ?? 0
+  const buf = b.buffer_days ?? b.items?.buffer_days ?? 0
   return all.find(
     (o) =>
       o.id !== b.id && o.item_id === b.item_id && isSold(o) &&
-      b.start_date <= addDays(o.end_date, buf) && o.start_date <= addDays(b.end_date, buf)
+      b.start_date <= addDays(o.end_date, o.buffer_days ?? o.items?.buffer_days ?? buf) &&
+      o.start_date <= addDays(b.end_date, buf)
   )
 }
 
@@ -68,9 +70,11 @@ export function useShop(shopId?: string) {
   const [costs, setCosts] = useState<Cost[]>([])
   const [rules, setRules] = useState<Rule[]>([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(Boolean(shopId))
 
   const reload = useCallback(async () => {
     if (!shopId) return
+    setLoading(true)
     const [i, b, br, c, r] = await Promise.all([
       supabase.from('items').select('*, branches(name)').eq('shop_id', shopId).order('name'),
       supabase.from('bookings').select('*, items(*, branches(name))').eq('shop_id', shopId).order('start_date'),
@@ -84,6 +88,7 @@ export function useShop(shopId?: string) {
     setBranches((br.data ?? []) as unknown as Branch[])
     setCosts((c.data ?? []) as unknown as Cost[])
     setRules((r.data ?? []) as unknown as Rule[])
+    setLoading(false)
   }, [shopId])
 
   useEffect(() => { reload() }, [reload])
@@ -95,5 +100,5 @@ export function useShop(shopId?: string) {
     else await reload()
   }
 
-  return { shopId, items, bookings, branches, costs, rules, error, reload, act }
+  return { shopId, items, bookings, branches, costs, rules, error, loading, reload, act }
 }

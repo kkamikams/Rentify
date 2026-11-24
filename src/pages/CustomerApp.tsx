@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { MessageCircle, ShoppingBag, User } from 'lucide-react'
+import { ArrowLeft, MessageCircle, ShoppingBag, User } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { peso } from '../lib/shop'
 import { Tag } from '../lib/ui'
@@ -9,13 +10,95 @@ import type { CItem } from '../lib/customer'
 import ItemPage, { SentPage } from './customer/ItemPage'
 import MyBookingsPage from './customer/MyBookingsPage'
 import MessagesPage from './customer/MessagesPage'
+import ProfilePage, { AccountLayout } from './customer/ProfilePage'
 
 type Product = { name: string; category: string | null; price: number; deposit: number; branches: string[]; rows: CItem[] }
-type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages'
+type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages' | 'profile'
+type CustomerMeta = { full_name?: string; phone?: string | null; addresses?: string[] }
 
 const CATS = ['Gown', 'Formal wear', 'Costume', 'Barong']
 const label = (c: string) => (c === 'Formal wear' ? 'Formal Wear' : c)
 const amber = 'font-semibold text-[#E3A21A]'
+
+function CustomerProfileSetup({ user }: { user: Session['user'] }) {
+  const meta = user.user_metadata as CustomerMeta
+  const [open, setOpen] = useState(user.user_metadata?.customer_profile_completed !== true)
+  const [name, setName] = useState(String(meta.full_name ?? ''))
+  const [phone, setPhone] = useState(String(meta.phone ?? ''))
+  const addresses = Array.isArray(meta.addresses)
+    ? meta.addresses.filter((saved): saved is string => typeof saved === 'string')
+    : []
+  const [address, setAddress] = useState(addresses[0] ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    const updatedAddresses = address.trim()
+      ? [address.trim(), ...addresses.filter((saved) => saved !== address.trim())]
+      : addresses
+    const { error: saveError } = await supabase.auth.updateUser({
+      data: {
+        full_name: name.trim(),
+        phone: phone.trim(),
+        addresses: updatedAddresses,
+        customer_profile_completed: true,
+      },
+    })
+    setBusy(false)
+    if (saveError) {
+      setError(saveError.message)
+      return
+    }
+    setOpen(false)
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
+      <section role="dialog" aria-modal="true" aria-labelledby="customer-profile-setup-title"
+        className="w-full max-w-lg rounded-sm bg-white p-8 shadow-lg">
+        <h2 id="customer-profile-setup-title" className="text-xl font-bold">Complete your profile</h2>
+        <p className="mb-5 mt-2 text-sm text-ink/70">
+          Add your contact details so shops can reach you about reservations.
+        </p>
+        <form onSubmit={save} className="space-y-4">
+          <label className="block text-sm text-ink/70">
+            Full name
+            <input autoFocus required className="mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm"
+              value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="block text-sm text-ink/70">
+            Mobile number
+            <input required type="tel" placeholder="09xx xxx xxxx"
+              className="mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm"
+              value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </label>
+          <label className="block text-sm text-ink/70">
+            Primary pickup address <span className="text-ink/50">(optional)</span>
+            <input className="mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm"
+              placeholder="Street, barangay, city" value={address} onChange={(e) => setAddress(e.target.value)} />
+          </label>
+          <p className="text-sm text-ink/60">Account email: {user.email}</p>
+          {error && <p role="alert" className="text-sm text-cleaning">{error}</p>}
+          <div className="flex justify-end gap-3">
+            <button type="button" className="rounded-sm border border-ink/20 px-4 py-2 text-sm font-semibold"
+              onClick={() => setOpen(false)}>
+              Later
+            </button>
+            <button type="submit" disabled={busy}
+              className="rounded-sm bg-booked px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              {busy ? 'Saving…' : 'Save details'}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  )
+}
 
 const Facebook = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -37,8 +120,8 @@ function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOp
       <div className="aspect-[3/4] w-full overflow-hidden bg-white">
         {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
       </div>
-      <p className="mt-2 text-sm">{p.name}</p>
-      <p className="text-sm"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
+      <p className="mt-2 text-[11px]">{p.name}</p>
+      <p className="text-[11px]"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
       {showBranch && (
         <div className="mt-1 flex flex-wrap gap-1">{p.branches.map((b) => <Tag key={b}>{b}</Tag>)}</div>
       )}
@@ -56,9 +139,6 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
   const [itemId, setItemId] = useState('')
   const [sent, setSent] = useState({ start: '', end: '' })
   const [msgBranch, setMsgBranch] = useState<string | undefined>()
-  const [itemOrigin, setItemOrigin] = useState<'home' | 'catalog'>('catalog')
-  const [bookingsOrigin, setBookingsOrigin] = useState<View>('home')
-  const [messagesOrigin, setMessagesOrigin] = useState<View>('home')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -99,48 +179,29 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
   )
 
   const go = (v: View, c = 'All') => { setView(v); setCategory(c); window.scrollTo(0, 0) }
-  const openBookings = (origin: View) => {
-    setBookingsOrigin(origin)
-    setView('bookings')
-    window.scrollTo(0, 0)
-  }
-  const backFromBookings = () => {
-    setView(bookingsOrigin)
-    window.scrollTo(0, 0)
-  }
-  const openMessages = (origin: View, branchId?: string) => {
-    if (origin !== 'messages') setMessagesOrigin(origin)
-    setMsgBranch(branchId)
-    setView('messages')
-    window.scrollTo(0, 0)
-  }
-  const backFromMessages = () => {
-    setView(messagesOrigin)
-    window.scrollTo(0, 0)
-  }
   const open = (p: Product) => {
     const r = p.rows.find((x) => x.branches?.name === active) ?? p.rows[0]
-    setItemOrigin(view === 'home' ? 'home' : 'catalog')
     setItemId(r.id)
     setView('item')
     window.scrollTo(0, 0)
   }
-  const backFromItem = () => {
-    setView(itemOrigin)
-    window.scrollTo(0, 0)
-  }
   const item = cat.items.find((i) => i.id === itemId)
+  const account = view === 'profile' || view === 'bookings'
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="bg-ink py-2 text-center text-xs font-medium tracking-wide text-cream">
-        {view === 'home' ? 'YOUR NEXT OCCASION, YOUR PERFECT OUTFIT.' : 'FIND YOUR FIT'}
-      </div>
+      {account ? (
+        <div className="h-1.5 bg-ink" />
+      ) : (
+        <div className="bg-ink py-2 text-center text-[11px] font-medium tracking-wide text-cream">
+          {view === 'home' ? 'YOUR NEXT OCCASION, YOUR PERFECT OUTFIT.' : 'FIND YOUR FIT'}
+        </div>
+      )}
 
       <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <button onClick={() => go('home')} className="text-xl font-semibold">Rentify.</button>
-          {multi && (
+          <button onClick={() => go('home')} aria-label="Rentify home" className="text-xl font-semibold">Rentify.</button>
+          {multi && !account && (
             <nav className="flex gap-10 text-sm font-medium">
               {['All branches', ...branchNames].map((b) => (
                 <button key={b} onClick={() => { setBranch(b); go('catalog') }}
@@ -151,13 +212,29 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
             </nav>
           )}
           <div className="flex items-center gap-5">
-            {name && <span className="hidden text-sm sm:inline">{name}</span>}
-            <button onClick={() => openMessages(view)} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
-            <button onClick={onSignOut} title="Sign out" aria-label="Sign out"><User size={20} fill="currentColor" /></button>
-            <button onClick={() => openBookings(view)} title="My bookings" aria-label="My bookings"><ShoppingBag size={20} fill="currentColor" /></button>
+            {name && !account && <span className="hidden text-sm sm:inline">{name}</span>}
+            {!account && (
+              <button onClick={() => { setMsgBranch(undefined); go('messages') }} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
+            )}
+            <button onClick={() => go('profile')} title="My profile" aria-label="My profile"><User size={20} fill="currentColor" /></button>
+            {!account && (
+              <button onClick={() => go('bookings')} title="My bookings" aria-label="My bookings">
+                <ShoppingBag size={20} fill="currentColor" />
+              </button>
+            )}
           </div>
         </div>
       </header>
+
+      {account && (
+        <div className="mx-auto max-w-6xl px-6 pt-4">
+          <button onClick={() => go('home')} aria-label="Back to home page"
+            title="Back to home page" className="flex items-center text-sm font-medium hover:underline">
+            <ArrowLeft size={18} />
+          </button>
+        </div>
+      )}
+      {session && <CustomerProfileSetup key={session.user.id} user={session.user} />}
 
       {cat.error && <p className="px-6 pt-4 text-sm text-cleaning">{cat.error}</p>}
 
@@ -168,7 +245,7 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
               <h1 className="text-3xl font-bold leading-snug">
                 Dress for the moment,<br />Rent it with <span className="font-light italic">Rentify.</span>
               </h1>
-              <p className="mb-6 mt-3 text-sm">Find your perfect outfit for every occasion.</p>
+              <p className="mb-6 mt-3 text-xs">Find your perfect outfit for every occasion.</p>
               <button onClick={() => go('catalog')} className="rounded-sm bg-ink px-5 py-2.5 text-sm font-semibold text-cream shadow">
                 Browse Rentals →
               </button>
@@ -176,7 +253,7 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
           </section>
 
           <section className="mx-auto max-w-6xl px-6 py-10">
-            <h2 className="mb-6 inline-block border-b-2 border-ink pb-1 text-xl font-bold tracking-wide">RENT BY CATEGORY</h2>
+            <h2 className="mb-6 inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">RENT BY CATEGORY</h2>
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
               {CATS.map((c) => (
                 <div key={c} className="flex h-44 flex-col justify-end bg-white p-3 shadow-sm">
@@ -187,14 +264,14 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
               ))}
             </div>
 
-            <h2 className="mb-6 mt-10 inline-block border-b-2 border-ink pb-1 text-xl font-bold tracking-wide">NEW ARRIVALS</h2>
+            <h2 className="mb-6 mt-10 inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">NEW ARRIVALS</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-6">
               {products.slice(0, 6).map((p) => <Card key={p.name} p={p} showBranch={multi} onOpen={() => open(p)} />)}
             </div>
             {products.length === 0 && !cat.error && <p className="text-sm text-ink/60">No items yet.</p>}
           </section>
 
-          <footer className="bg-ink px-6 py-10 text-sm text-cream">
+          <footer className="bg-ink px-6 py-10 text-xs text-cream">
             <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8">
               <div className="space-y-3"><p className="text-sm font-semibold">Rentify.</p><p>Search</p><p>Book A Fitting</p><p>FAQ</p><p>Terms and Conditions</p></div>
               <div className="space-y-3"><p>SOCIALS</p><p className="flex items-center gap-2"><Facebook /> Facebook</p><p className="flex items-center gap-2"><Instagram /> Instagram</p></div>
@@ -213,10 +290,10 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
               </button>
             ))}
           </nav>
-          <div className="mb-6 flex items-center justify-center gap-4 text-xs text-ink/70">
+          <div className="mb-6 flex items-center justify-center gap-4 text-[10px] text-ink/70">
             <span>{shown.length} products</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search"
-              className="w-32 rounded-full bg-cell px-3 py-0.5 text-xs" />
+              className="w-32 rounded-full bg-cell px-3 py-0.5 text-[10px]" />
           </div>
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             {shown.map((p) => <Card key={p.name} p={p} showBranch={multi} onOpen={() => open(p)} />)}
@@ -232,7 +309,7 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
           branches={cat.branches}
           shop={cat.shops.find((s) => s.id === item.shop_id)}
           session={session}
-          onBack={backFromItem}
+          onBack={() => go('catalog')}
           onNeedAuth={() => {}}
           onSent={(start, end) => { setSent({ start, end }); setView('sent'); window.scrollTo(0, 0) }}
         />
@@ -240,20 +317,24 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
 
       {view === 'sent' && item && (
         <SentPage item={item} start={sent.start} end={sent.end}
-          onBack={backFromItem} onBookings={() => openBookings('sent')} />
+          onBack={() => go('catalog')} onBookings={() => go('bookings')} />
+      )}
+
+      {view === 'profile' && session && (
+        <AccountLayout tab="profile" onTab={(t) => go(t)}>
+          <ProfilePage session={session} onSignOut={onSignOut} />
+        </AccountLayout>
       )}
 
       {view === 'bookings' && (
-        <MyBookingsPage onBack={backFromBookings} onMessage={(b) => openMessages('bookings', b)} />
+        <AccountLayout tab="bookings" onTab={(t) => go(t)}>
+          <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
+        </AccountLayout>
       )}
 
       {view === 'messages' && session && (
-        <MessagesPage
-          session={session}
-          branches={cat.branches}
-          initialBranch={msgBranch}
-          onBack={backFromMessages}
-        />
+        <MessagesPage session={session} branches={cat.branches} shops={cat.shops}
+          initialBranch={msgBranch} onBack={() => go('home')} />
       )}
     </div>
   )

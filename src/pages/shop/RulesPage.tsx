@@ -6,8 +6,8 @@ import { input } from '../../lib/ui'
 // Sizes for this page, matched to the design
 const section = 'mb-8 rounded-sm bg-white px-8 py-6 shadow-md'
 const h = 'text-xl font-bold leading-tight'
-const sub = 'text-xs text-ink/50'
-const th = 'pb-2 text-left text-xs font-semibold'
+const sub = 'text-sm text-ink/50'
+const th = 'pb-2 text-left text-sm font-semibold'
 const td = 'border-t border-ink/15 py-2 text-sm'
 const field = `${input} h-9 w-full text-sm`
 

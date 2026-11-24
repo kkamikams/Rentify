@@ -23,16 +23,16 @@ export default function StatusBoardPage({ shop, branch }: { shop: Shop; branch: 
           <h3 className="mb-3 text-center text-xl font-bold">{label}</h3>
           {mine.filter((b) => norm(b.status) === key).map((b) => (
             <div key={b.id} className="mb-3 rounded-sm bg-white p-3 text-center shadow-sm">
-              <div className="mb-2 border-b border-ink/20 pb-1 text-xs font-semibold">{branchName(b)}</div>
-              <div className="text-xs font-bold">{b.items?.name}</div>
-              <div className="mb-2 text-[9px]">{b.customer_name} · {fmt(b.start_date)} - {fmt(b.end_date)}</div>
+              <div className="mb-2 border-b border-ink/20 pb-1 text-sm font-semibold">{branchName(b)}</div>
+              <div className="text-sm font-bold">{b.items?.name}</div>
+              <div className="mb-2 text-sm">{b.customer_name} · {fmt(b.start_date)} - {fmt(b.end_date)}</div>
               {key === 'pending' ? (
                 <div className="flex gap-1">
-                  <button className={`${btn} flex-1 px-2 text-xs`} onClick={() => set(b.id, 'reserved')}>Confirm</button>
-                  <button className={`${btn2} flex-1 px-2 text-xs`} onClick={() => set(b.id, 'cancelled')}>Decline</button>
+                  <button className={`${btn} flex-1 px-2 text-sm`} onClick={() => set(b.id, 'reserved')}>Confirm</button>
+                  <button className={`${btn2} flex-1 px-2 text-sm`} onClick={() => set(b.id, 'cancelled')}>Decline</button>
                 </div>
               ) : NEXT[key] ? (
-                <button className={`${btn} w-full px-2 text-xs`} onClick={() => set(b.id, NEXT[key][0])}>
+                <button className={`${btn} w-full px-2 text-sm`} onClick={() => set(b.id, NEXT[key][0])}>
                   Move to {NEXT[key][1]}
                 </button>
               ) : null}

@@ -31,7 +31,7 @@ export default function RequestsPage({ shop, branch }: { shop: Shop; branch: str
               <Tag>{branchName(b)}</Tag>
               <Tag>New Request</Tag>
             </div>
-            <p className="mb-5 text-xs">{x?.category}</p>
+            <p className="mb-5 text-sm">{x?.category}</p>
             <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Field l="Customer" v={b.customer_name} />
               <Field l="Phone" v={b.customer_phone ?? '-'} />
@@ -46,11 +46,11 @@ export default function RequestsPage({ shop, branch }: { shop: Shop; branch: str
             </div>
             {b.note && (
               <div className="mb-4">
-                <div className="mb-1 text-[10px] text-ink/60">Note from customer</div>
-                <div className="rounded-sm border border-ink/25 px-3 py-2 text-xs">{b.note}</div>
+                <div className="mb-1 text-sm text-ink/60">Note from customer</div>
+                <div className="rounded-sm border border-ink/25 px-3 py-2 text-sm">{b.note}</div>
               </div>
             )}
-            <div className="mb-4 text-xs leading-relaxed">
+            <div className="mb-4 text-sm leading-relaxed">
               {c ? (
                 <p className="font-bold text-cleaning">
                   Dates are not available. They overlap {c.customer_name}'s booking or its cleaning days.

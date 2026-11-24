@@ -63,13 +63,13 @@ export default function ShopMessagesPage({ shop, branch }: { shop: Shop; branch:
     <div className="grid gap-5 md:grid-cols-[250px_1fr]">
       <aside className="h-[420px] overflow-y-auto rounded-sm bg-white p-4 shadow-md">
         <h2 className="mb-3 border-b border-ink/20 pb-3 text-lg font-bold">Messages</h2>
-        {convs.length === 0 && <p className="text-xs text-ink/50">No messages yet.</p>}
+        {convs.length === 0 && <p className="text-sm text-ink/50">No messages yet.</p>}
         {convs.map((c) => (
           <button key={c.key} onClick={() => setSel(c.key)}
             className={`mb-1 flex w-full items-center gap-3 rounded-sm p-2 text-left ${cur?.key === c.key ? 'bg-cream' : ''}`}>
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-reserved"><User size={16} /></span>
-            <span className="min-w-0 text-[10px]">
-              <span className="block text-xs font-semibold">{nameOf(c.last.customer_id)}</span>
+            <span className="min-w-0 text-sm">
+              <span className="block text-sm font-semibold">{nameOf(c.last.customer_id)}</span>
               {multi && <Tag>{branchNm(c.last.branch_id)}</Tag>}
               <span className="block truncate text-ink/60">{c.last.body}</span>
             </span>
@@ -84,15 +84,15 @@ export default function ShopMessagesPage({ shop, branch }: { shop: Shop; branch:
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
           {cur?.list.map((m) => (
             <div key={m.id} className={`max-w-[70%] ${m.sender === 'shop' ? 'self-end' : 'self-start'}`}>
-              <div className={`rounded-xl px-3 py-2 text-[11px] ${m.sender === 'shop' ? 'bg-booked text-white' : 'bg-reserved'}`}>{m.body}</div>
-              <div className="mt-0.5 text-[9px] text-ink/50">{time(m.created_at)}</div>
+              <div className={`rounded-xl px-3 py-2 text-sm ${m.sender === 'shop' ? 'bg-booked text-white' : 'bg-reserved'}`}>{m.body}</div>
+              <div className="mt-0.5 text-sm text-ink/50">{time(m.created_at)}</div>
             </div>
           ))}
         </div>
-        {err && <p className="px-4 text-xs text-cleaning">{err}</p>}
+        {err && <p className="px-4 text-sm text-cleaning">{err}</p>}
         <form onSubmit={send} className="flex gap-3 p-4">
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a message" disabled={!cur}
-            className="flex-1 rounded-md border border-ink/40 bg-white px-3 py-2 text-xs" />
+            className="flex-1 rounded-md border border-ink/40 bg-white px-3 py-2 text-sm" />
           <button disabled={!cur} className="rounded-sm bg-ink px-6 py-2 text-sm font-semibold text-white disabled:opacity-50">Send</button>
         </form>
       </section>

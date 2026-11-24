@@ -98,7 +98,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => supabase.auth.signOut()}
-            className="w-full text-xs underline"
+            className="w-full text-sm underline"
           >
             Log out
           </button>
@@ -111,6 +111,7 @@ export default function App() {
     <ShopApp
       shopId={membership.shops?.id}
       shopName={membership.shops?.name}
+      user={session.user}
       onSignOut={() => supabase.auth.signOut()}
     />
   )

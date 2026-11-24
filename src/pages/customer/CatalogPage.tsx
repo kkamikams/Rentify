@@ -14,7 +14,7 @@ export function ItemCard({ item, onOpen, showBranch = false }: { item: CItem; on
         <span className="text-[#E3A72F]">{peso(item.price_per_day ?? 0)}</span> + {peso(item.deposit ?? 0)} deposit
       </div>
       {showBranch && item.branches && (
-        <span className="mt-1 inline-block rounded-sm bg-reserved px-2 py-0.5 text-xs font-bold">{item.branches.name}</span>
+        <span className="mt-1 inline-block rounded-sm bg-reserved px-2 py-0.5 text-sm font-bold">{item.branches.name}</span>
       )}
     </button>
   )
@@ -53,7 +53,7 @@ export default function CatalogPage({
           </button>
         ))}
       </nav>
-      <div className="mb-8 flex flex-wrap items-center justify-center gap-4 text-xs">
+      <div className="mb-8 flex flex-wrap items-center justify-center gap-4 text-sm">
         <span>FILTERS AND SORT</span>
         <select value={sort} onChange={(e) => setSort(e.target.value)} className="rounded-sm border border-ink/25 bg-white px-2 py-1">
           <option value="name">Name</option>

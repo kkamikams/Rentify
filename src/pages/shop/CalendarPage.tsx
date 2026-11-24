@@ -68,6 +68,55 @@ function cellFor(b: Booking, buffer: number, day: string, today: string) {
   return null
 }
 
+function blockedReason(item: Item, day: string, today: string) {
+  for (const b of item.bookings) {
+    const status = norm(b.status)
+    if (status === 'cancelled' || status === 'canceled' || status === 'declined') continue
+
+    const buffer = b.buffer_days ?? item.buffer_days ?? 0
+    if (day >= b.start_date && day <= b.end_date) {
+      return `Booked: ${b.customer_name ?? 'another customer'}`
+    }
+    if (OUT.includes(status) && day > b.end_date && day <= today) {
+      return 'Blocked: item is late and not yet returned'
+    }
+    if (NEEDS_CLEANING.includes(status) && day > b.end_date && day <= addDays(b.end_date, buffer)) {
+      return `Cleaning buffer: ${buffer} day${buffer === 1 ? '' : 's'} after return`
+    }
+  }
+  return ''
+}
+
+function rangeBlockedReason(item: Item, start: string, nights: number, today: string) {
+  const end = addDays(start, nights - 1)
+
+  for (const b of item.bookings) {
+    const status = norm(b.status)
+    if (status === 'cancelled' || status === 'canceled' || status === 'declined') continue
+
+    const buffer = b.buffer_days ?? item.buffer_days ?? 0
+    const blockedStart = addDays(b.start_date, -buffer)
+    const blockedEnd = addDays(b.end_date, buffer)
+    if (start <= blockedEnd && blockedStart <= end) {
+      if (dayInsideBooking(start, end, b.start_date, b.end_date)) {
+        return `Booked: ${b.customer_name ?? 'another customer'}`
+      }
+      if (OUT.includes(status) && start <= today && end >= b.end_date) {
+        return 'Blocked: item is late and not yet returned'
+      }
+      if (NEEDS_CLEANING.includes(status)) {
+        return `Cleaning buffer: ${buffer} day${buffer === 1 ? '' : 's'} after return`
+      }
+      return 'Blocked: another booking or its cleaning buffer overlaps'
+    }
+  }
+  return ''
+}
+
+function dayInsideBooking(start: string, end: string, bookingStart: string, bookingEnd: string) {
+  return start <= bookingEnd && bookingStart <= end
+}
+
 const COLOR_CLASS: Record<Color, string> = {
   reserved: 'bg-reserved text-white',
   booked: 'bg-booked text-white',
@@ -132,6 +181,8 @@ export default function CalendarPage({ branch }: { branch: string }) {
     ...new Map(visible.filter((i) => i.branches).map((i) => [codeOf(i.branches!.name), i.branches!.name])),
   ]
   const monthLabel = new Date(y, m - 1, 1).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })
+  const chosenItem = visible.find((i) => i.id === chosenId)
+  const startReason = chosenItem ? rangeBlockedReason(chosenItem, startDate, nights, today) : ''
 
   async function addBooking(e: FormEvent) {
     e.preventDefault()
@@ -211,15 +262,15 @@ export default function CalendarPage({ branch }: { branch: string }) {
           {LEGEND.map(({ color, label }) => (
             <div key={color} className="flex flex-col items-center gap-1">
               <span className={`h-6 w-12 rounded-sm shadow ${COLOR_CLASS[color].split(' ')[0]}`} />
-              <span className="text-[8px] text-ink">{label}</span>
+              <span className="text-sm text-ink">{label}</span>
             </div>
           ))}
           <div className="flex flex-col items-center gap-1">
-            <span className="h-6 w-12 rounded-sm bg-booked shadow ring-2 ring-cleaning" />
-            <span className="text-[8px] text-ink">Late</span>
+            <span className="h-6 w-12 rounded-sm bg-booked shadow" />
+            <span className="text-sm text-ink">Late</span>
           </div>
         </div>
-        <p className="mb-6 text-[8px] leading-tight text-ink">
+        <p className="mb-6 text-sm leading-tight text-ink">
           {(multi ? legendBranches : []).map(([code, bName]) => (
             <span key={code} className="block">
               {code} = {bName}
@@ -235,7 +286,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
 
         <div className="overflow-x-auto">
           <div className="min-w-[1000px]">
-            <div style={cols} className="grid gap-x-1 pb-2 text-[11px] font-medium">
+            <div style={cols} className="grid gap-x-1 pb-2 text-sm font-medium">
               <span />
               {days.map((d) => (
                 <span
@@ -264,12 +315,36 @@ export default function CalendarPage({ branch }: { branch: string }) {
                     <div
                       key={d}
                       title={`${hit.b.customer_name ?? 'Customer'} · ${norm(hit.b.status).replace('_', ' ')}${hit.late ? ' · late' : ''}`}
-                      className={`flex h-6 items-center justify-center rounded-sm text-[11px] font-bold ${COLOR_CLASS[hit.color]} ${hit.late ? 'ring-2 ring-cleaning' : ''}`}
+                      onClick={() => {
+                        setStartDate(d)
+                        setMsg({ ok: false, text: blockedReason(item, d, today) || 'Those dates are not available.' })
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setStartDate(d)
+                          setMsg({ ok: false, text: blockedReason(item, d, today) || 'Those dates are not available.' })
+                        }
+                      }}
+                      className={`flex h-6 cursor-not-allowed items-center justify-center rounded-sm text-sm font-bold ${COLOR_CLASS[hit.color]}`}
                     >
-                      {item.branches ? codeOf(item.branches.name) : ''}
+                      {multi && item.branches ? codeOf(item.branches.name) : ''}
                     </div>
                   ) : (
-                    <div key={d} className="h-6 rounded-sm bg-cell" />
+                    <button
+                      key={d}
+                      type="button"
+                      title={`Use ${d} as start date`}
+                      onClick={() => {
+                        setItemId(item.id)
+                        setStartDate(d)
+                        setMsg(null)
+                      }}
+                      className="h-6 rounded-sm bg-cell hover:ring-1 hover:ring-ink/30"
+                      aria-label={`Choose ${d} for ${item.name}`}
+                    />
                   )
                 })}
               </div>
@@ -284,7 +359,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
           onSubmit={addBooking}
           className="grid max-w-3xl grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2"
         >
-          <label className="text-[11px] text-ink/70">
+          <label className="text-sm text-ink/70">
             Item
             <select
               className={fieldCls}
@@ -300,7 +375,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
             </select>
           </label>
 
-          <label className="text-[11px] text-ink/70">
+          <label className="text-sm text-ink/70">
             Start date
             <input
               type="date"
@@ -308,11 +383,17 @@ export default function CalendarPage({ branch }: { branch: string }) {
               value={startDate}
               min={today}
               required
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => {
+                setStartDate(e.target.value)
+                setMsg(null)
+              }}
             />
+            {startReason && (
+              <p className="mt-1 text-sm font-semibold text-cleaning">{startReason}</p>
+            )}
           </label>
 
-          <label className="text-[11px] text-ink/70">
+          <label className="text-sm text-ink/70">
             Customer name
             <input
               className={fieldCls}
@@ -323,7 +404,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
             />
           </label>
 
-          <label className="text-[11px] text-ink/70">
+          <label className="text-sm text-ink/70">
             Phone number
             <input
               type="tel"
@@ -334,7 +415,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
             />
           </label>
 
-          <label className="text-[11px] text-ink/70">
+          <label className="text-sm text-ink/70">
             Number of days
             <select
               className={fieldCls}
@@ -354,7 +435,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
           <div className="flex items-end">
             <button
               type="submit"
-              disabled={saving || !chosenId}
+              disabled={saving || !chosenId || !!startReason}
               className="rounded-sm bg-booked px-4 py-2.5 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)] disabled:opacity-50"
             >
               {saving ? 'Adding...' : 'Add booking'}

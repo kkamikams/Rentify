@@ -63,7 +63,7 @@ export default function AuthPage() {
           </button>
         )}
         <h1 className="text-2xl font-semibold">Rentify.</h1>
-        <p className="mb-6 mt-1 text-xs text-ink/60">
+        <p className="mb-6 mt-1 text-sm text-ink/60">
           {mode === 'login' ? 'Log in to your account.' : 'Create your account.'}
         </p>
 
@@ -105,7 +105,7 @@ export default function AuthPage() {
         {error && <p className="mt-4 text-sm text-cleaning">{error}</p>}
         {info && <p className="mt-4 text-sm text-green-800">{info}</p>}
 
-        <p className="mt-6 text-xs text-ink/70">
+        <p className="mt-6 text-sm text-ink/70">
           {mode === 'login' ? 'New to Rentify?' : 'Already have an account?'}{' '}
           <button
             type="button"

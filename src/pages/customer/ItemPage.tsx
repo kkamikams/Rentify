@@ -24,6 +24,7 @@ export default function ItemPage({
   const [avail, setAvail] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [blockReason, setBlockReason] = useState('')
 
   const start = addDays(today(), offset)
   const end = addDays(start, days - 1)
@@ -39,15 +40,52 @@ export default function ItemPage({
 
   useEffect(() => {
     setAvail(null)
-    supabase.rpc('item_available', { p_item: item.id, p_start: start, p_end: end }).then(({ data, error }) => {
-      if (error) setErr(error.message)
-      else setAvail(!!data)
-    })
+    setBlockReason('')
+    ;(async () => {
+      const buffer = item.buffer_days ?? 0
+      const { data: clash, error: clashError } = await supabase
+        .from('bookings')
+        .select('id, customer_name, status')
+        .eq('item_id', item.id)
+        .neq('status', 'cancelled')
+        .neq('status', 'canceled')
+        .neq('status', 'declined')
+        .lte('start_date', addDays(end, buffer))
+        .gte('end_date', addDays(start, -buffer))
+        .limit(1)
+
+      if (clashError) {
+        setErr(clashError.message)
+        setAvail(null)
+        return
+      }
+
+      if (clash && clash.length > 0) {
+        setAvail(false)
+        setBlockReason('These dates overlap an existing booking or its cleaning buffer.')
+        return
+      }
+
+      const { data: rpcAvailable, error: rpcError } = await supabase.rpc(
+        'item_available',
+        { p_item: item.id, p_start: start, p_end: end }
+      )
+      if (rpcError) {
+        setErr(rpcError.message)
+        setAvail(null)
+      } else {
+        setAvail(!!rpcAvailable)
+      }
+    })()
   }, [item.id, start, end])
 
   async function reserve() {
     if (!session) return onNeedAuth()
     if (!phone.trim() || !ref.trim()) return setErr('Enter your mobile number and the payment reference no.')
+    if (avail === false) {
+      setErr(blockReason || 'Those dates are not available. Pick other dates.')
+      return
+    }
     setBusy(true)
     setErr('')
     const { data: ok } = await supabase.rpc('item_available', { p_item: item.id, p_start: start, p_end: end })
@@ -81,11 +119,11 @@ export default function ItemPage({
               <p>{item.category}</p>
               {multi && <p className="mt-3">Pickup at <b>{item.branches?.name} Branch</b></p>}
               <div className="mt-3 flex flex-wrap gap-1">
-                {pieces.map((p) => <span key={p} className="rounded-sm bg-reserved px-2 py-0.5 text-xs font-semibold">{p}</span>)}
+                {pieces.map((p) => <span key={p} className="rounded-sm bg-reserved px-2 py-0.5 text-sm font-semibold">{p}</span>)}
               </div>
             </div>
             {sizeLines.length > 0 && (
-              <div className="w-44 shrink-0 space-y-1 rounded-sm border border-ink/20 p-3 text-xs">
+              <div className="w-44 shrink-0 space-y-1 rounded-sm border border-ink/20 p-3 text-sm">
                 {sizeLines.map((line) => {
                   const [l, ...rest] = line.split(':')
                   return rest.length
@@ -97,24 +135,24 @@ export default function ItemPage({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-            <label className="text-xs text-ink/70">Pickup day
+            <label className="text-sm text-ink/70">Pickup day
               <select className={box} value={offset} onChange={(e) => setOffset(+e.target.value)}>
                 {Array.from({ length: 14 }, (_, n) => <option key={n} value={n}>{longDate(addDays(today(), n))}</option>)}
               </select>
             </label>
-            <label className="text-xs text-ink/70">Day/s
+            <label className="text-sm text-ink/70">Day/s
               <select className={box} value={days} onChange={(e) => setDays(+e.target.value)}>
                 {[1, 2, 3, 4].map((n) => <option key={n}>{n}</option>)}
               </select>
             </label>
-            <label className="text-xs text-ink/70">Mobile Number
+            <label className="text-sm text-ink/70">Mobile Number
               <input className={box} placeholder="09## #### ###" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </label>
-            <label className="text-xs text-ink/70">Note to shop (optional)
+            <label className="text-sm text-ink/70">Note to shop (optional)
               <input className={box} maxLength={140} value={note} onChange={(e) => setNote(e.target.value)} />
             </label>
             {multi && (
-              <label className="text-xs text-ink/70">Return at
+              <label className="text-sm text-ink/70">Return at
                 <select className={box} value={ret} onChange={(e) => setRet(e.target.value)}>
                   {shopBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
@@ -124,26 +162,26 @@ export default function ItemPage({
           <p className="mt-3 text-sm">
             {avail === null ? 'Checking dates...'
               : avail ? <><b className="font-semibold text-green-700">Available.</b> Return by {longDate(end)}.</>
-              : <><b className="font-semibold text-red-600">Not available</b> for those dates. Try another day.</>}
+              : <><b className="font-semibold text-red-600">Not available</b> for those dates. {blockReason || 'Try another day.'}</>}
           </p>
-          <p className="mt-2 text-xs text-ink/50">
+          <p className="mt-2 text-sm text-ink/50">
             Deposit {peso(deposit)}. Late return: {peso(item.late_fee_per_day ?? 0)} per day. Missing pieces are charged from the deposit.
           </p>
 
           <div className="mt-4 rounded-sm bg-reserved/40 p-4">
             <h3 className="mb-1 text-xl font-bold">Pay the gown and deposit online ({peso(price * days)} + {peso(deposit)})</h3>
-            <p className="mb-3 text-xs">Online payments only: e-wallet or bank transfer.</p>
+            <p className="mb-3 text-sm">Online payments only: e-wallet or bank transfer.</p>
             <div className="grid grid-cols-2 gap-4">
-              <label className="text-xs text-ink/70">Payment method
+              <label className="text-sm text-ink/70">Payment method
                 <select className={box} value={method} onChange={(e) => setMethod(e.target.value)}>
                   {['GCash', 'Maya', 'Bank transfer'].map((m) => <option key={m}>{m}</option>)}
                 </select>
               </label>
-              <label className="text-xs text-ink/70">Reference no.
+              <label className="text-sm text-ink/70">Reference no.
                 <input className={box} placeholder="Transaction / reference no." value={ref} onChange={(e) => setRef(e.target.value)} />
               </label>
             </div>
-            {shop?.pay_number && <p className="mt-3 text-xs">Send to {shop.pay_number}{shop.pay_name ? ` (${shop.pay_name})` : ''}</p>}
+            {shop?.pay_number && <p className="mt-3 text-sm">Send to {shop.pay_number}{shop.pay_name ? ` (${shop.pay_name})` : ''}</p>}
           </div>
 
           {err && <p className="mt-3 text-cleaning">{err}</p>}
@@ -171,7 +209,7 @@ export function SentPage({
         {row('Return by', longDate(end))}
         {row('Deposit', peso(item.deposit ?? 0))}
         {row('Late fee', `${peso(item.late_fee_per_day ?? 0)}/day`)}
-        <p className="my-4 text-xs text-ink/50">You'll get a reminder the day before your return date.</p>
+        <p className="my-4 text-sm text-ink/50">You'll get a reminder the day before your return date.</p>
         <div className="text-center">
           <button onClick={onBookings}
             className="rounded-sm bg-ink px-6 py-2.5 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]">

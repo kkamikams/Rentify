@@ -69,13 +69,24 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
   const lateFee = waive ? 0 : late * fee
   const refund = Math.max(0, deposit - missingFee - lateFee)
   const update = (patch: object) => shop.act(supabase.from('bookings').update(patch).eq('id', b.id))
+  const lateEndDate = addDays(b.end_date, late)
+  const buffer = b.buffer_days ?? b.items?.buffer_days ?? 0
+  const nextRisk = out
+    ? shop.bookings.find((other) =>
+      other.id !== b.id &&
+      other.item_id === b.item_id &&
+      !['cancelled', 'canceled', 'declined'].includes(norm(other.status)) &&
+      addDays(lateEndDate, other.buffer_days ?? other.items?.buffer_days ?? buffer) >= other.start_date &&
+      other.start_date > b.end_date
+    )
+    : undefined
 
   const handOver = () =>
     update({ status: 'out', deposit_received: true, deposit_amount: deposit, payment_method: method })
 
   const complete = () =>
     update({
-      status: 'returned', days_late: late, late_fee_waived: waive, late_fee: lateFee + missingFee,
+      status: 'returned', days_late: late, late_fee_waived: waive, late_fee: lateFee,
       late_fee_note: [
         missing.length ? `Missing: ${missing.map((p) => p.name).join(', ')} (${peso(missingFee)})` : '',
         cond !== 'Good' ? `Condition: ${cond}` : '',
@@ -129,6 +140,12 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
               </select>
             </label>
           </div>
+          {late > 0 && nextRisk && (
+            <p className="mb-5 rounded-sm border border-cleaning/30 bg-cleaning/10 px-4 py-3 text-sm font-semibold text-cleaning">
+              Late return puts the next pickup at risk: {nextRisk.customer_name ?? 'A customer'} is due to pick up
+              {' '}{fmt(nextRisk.start_date)}. The item will be available only after a {buffer}-day cleaning buffer.
+            </p>
+          )}
           <div className="mb-5 space-y-1 border-t border-ink/15 pt-4 text-base">
             <div className="flex justify-between"><span>Missing: {missing.length ? missing.map((p) => p.name).join(', ') : 'None'}</span><span>{peso(missingFee)}</span></div>
             <div className="flex items-center justify-between">

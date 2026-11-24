@@ -48,7 +48,7 @@ export default function CustomersPage({ shop, branch }: { shop: Shop; branch: st
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <p className="pt-3 text-xs text-ink/60">No customers yet.</p>}
+        {rows.length === 0 && <p className="pt-3 text-sm text-ink/60">No customers yet.</p>}
       </section>
     </div>
   )

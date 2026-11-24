@@ -29,7 +29,7 @@ export default function ReportsPage({ shop, branch }: { shop: Shop; branch: stri
             {top.map(([name, n]) => <tr key={name}><td className={td}>{name}</td><td className={td}>{n}</td></tr>)}
           </tbody>
         </table>
-        {top.length === 0 && <p className="pt-3 text-xs text-ink/60">No bookings yet.</p>}
+        {top.length === 0 && <p className="pt-3 text-sm text-ink/60">No bookings yet.</p>}
       </section>
     </div>
   )
