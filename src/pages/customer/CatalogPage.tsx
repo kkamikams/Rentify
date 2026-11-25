@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { itemImages } from '../../lib/customer'
 import type { CItem } from '../../lib/customer'
 import { CATEGORY_TABS } from '../../lib/customer'
@@ -6,33 +6,12 @@ import { peso } from '../../lib/shop'
 
 export function ItemCard({ item, onOpen, showBranch = false }: { item: CItem; onOpen: () => void; showBranch?: boolean }) {
   const [hovered, setHovered] = useState(false)
-  const [hoverIndex, setHoverIndex] = useState(0)
   const images = itemImages(item)
-
-  useEffect(() => {
-    if (!hovered || images.length < 2) return
-    setHoverIndex(1)
-    const interval = window.setInterval(() => {
-      setHoverIndex((current) => (current + 1) % images.length)
-    }, 800)
-    return () => window.clearInterval(interval)
-  }, [hovered, images.length])
-
-  useEffect(() => {
-    if (!hovered) setHoverIndex(0)
-  }, [hovered])
   return (
     <button onClick={onOpen} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} className="text-left">
       <div className="relative mb-2 aspect-[3/4] w-full overflow-hidden bg-white shadow-sm">
-        {images.map((image, index) => (
-          <img
-            key={image}
-            src={image}
-            alt={index === 0 ? item.name : ''}
-            aria-hidden={index !== 0 && index !== hoverIndex ? 'true' : undefined}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out ${hovered && index === hoverIndex ? 'opacity-100' : index === 0 && !hovered ? 'opacity-100' : 'opacity-0'}`}
-          />
-        ))}
+        {images[0] && <img src={images[0]} alt={item.name} className="absolute inset-0 h-full w-full object-cover" />}
+        {images[1] && <img src={images[1]} alt="" aria-hidden="true" className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out ${hovered ? 'opacity-100' : 'opacity-0'}`} />}
       </div>
       <div className="text-sm">{item.name}</div>
       <div className="text-sm">
