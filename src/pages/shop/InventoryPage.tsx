@@ -8,6 +8,8 @@ import { btn, card, input, Sub, td, th } from '../../lib/ui'
 const BUCKET = 'item-images'
 const MAX_MB = 5
 
+const NO_SPINNER = '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
+
 const num = (e: FocusEvent<HTMLInputElement>) => Number(e.target.value) || 0
 const sizeOf = (i: Item) => (i as Item & { size_info?: string | null }).size_info ?? ''
 const imageOf = (i: Item) => (i as Item & { image_url?: string | null }).image_url ?? null
@@ -63,8 +65,14 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       ? (item as Item & { image_urls?: string[] | null }).image_urls
       : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
 
-    if (existing.length + files.length > 2) {
-      setPhotoError(`This item already has ${existing.length} photo${existing.length === 1 ? '' : 's'}. A maximum of 2 photos is allowed.`)
+    const total = existing.length + files.length
+    if (total < 2) {
+      setPhotoError('Choose at least 2 photos for a gallery.')
+      setPhotoBusy('')
+      return
+    }
+    if (total > 4) {
+      setPhotoError(`This item would have ${total} photos. A maximum of 4 photos is allowed.`)
       setPhotoBusy('')
       return
     }
@@ -77,7 +85,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
         uploaded.push(await uploadImage(shop.shopId, file))
       }
 
-      const next = [...existing, ...uploaded.map((photo) => photo.url)].slice(0, 2)
+      const next = [...existing, ...uploaded.map((photo) => photo.url)].slice(0, 4)
       let { error } = await supabase.from('items').update({ image_url: next[0], image_urls: next }).eq('id', item.id)
       if (error?.message.includes('image_urls')) {
         const fallback = await supabase.from('items').update({ image_url: next[0] }).eq('id', item.id)
@@ -126,8 +134,12 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
     try {
       let imageUrl: string | null = null
       const uploadedGallery: string[] = []
-      if (images.length > 2) {
-        setAddError('Choose no more than 2 photos.')
+      if (images.length < 2) {
+        setAddError('Choose at least 2 photos for a gallery.')
+        return
+      }
+      if (images.length > 4) {
+        setAddError('Choose no more than 4 photos.')
         return
       }
       for (const image of images) {
@@ -221,7 +233,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
                             multiple
                             className="hidden"
                             disabled={busy}
-                            onChange={(e) => { changePhotos(i, Array.from(e.target.files ?? []).slice(0, 2)); e.target.value = '' }}
+                            onChange={(e) => { changePhotos(i, Array.from(e.target.files ?? []).slice(0, 4)); e.target.value = '' }}
                           />
                         </label>
                         {img && !busy && (
@@ -243,8 +255,9 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
                   </td>
                   {(['price_per_day', 'deposit', 'late_fee_per_day'] as const).map((k) => (
                     <td key={k} className={td}>
-                      <input type="number" min={0} className={`${input} h-8 w-24`} key={`${k}${i.id}${i[k]}`}
-                        defaultValue={i[k] ?? 0} onBlur={(e) => save(i.id, { [k]: num(e) })} />
+                      <input type="number" min={0} className={`${input} h-8 w-24 ${NO_SPINNER}`}
+                        key={`${k}${i.id}${i[k]}`} defaultValue={i[k] ?? 0}
+                        onBlur={(e) => save(i.id, { [k]: num(e) })} />
                     </td>
                   ))}
                   <td className={td}>
@@ -274,8 +287,8 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
           <select className={input} value={f.branch_id} onChange={(e) => set('branch_id', e.target.value)}>
             {shop.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-          <input type="number" min={0} className={input} placeholder="Price/day" value={f.price} onChange={(e) => set('price', e.target.value)} />
-          <input type="number" min={0} className={input} placeholder="Deposit" value={f.deposit} onChange={(e) => set('deposit', e.target.value)} />
+          <input type="number" min={0} className={`${input} ${NO_SPINNER}`} placeholder="Price/day" value={f.price} onChange={(e) => set('price', e.target.value)} />
+          <input type="number" min={0} className={`${input} ${NO_SPINNER}`} placeholder="Deposit" value={f.deposit} onChange={(e) => set('deposit', e.target.value)} />
           <input className={`${input} col-span-2`} placeholder="Inclusions (comma separated)" value={f.inclusions} onChange={(e) => set('inclusions', e.target.value)} />
           <textarea className={`${input} col-span-2 sm:col-span-4`} rows={3}
             placeholder={'Sizes (one per line), e.g.\nBust: 93 cm / 37 in\nWaist: 73 cm / 29 in'}
@@ -289,13 +302,13 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
               ))}
             </div>
             <label className="text-sm">
-              Item photos (optional, 1-2 photos, max {MAX_MB} MB each)
+              Item photos (2-4 photos, max {MAX_MB} MB each)
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 className="mt-1 block w-full text-sm"
-                onChange={(e) => setImages(Array.from(e.target.files ?? []).slice(0, 2))}
+                onChange={(e) => setImages(Array.from(e.target.files ?? []).slice(0, 4))}
               />
               {images.length > 0 && (
                 <button type="button" className="mt-1 text-sm underline" onClick={() => setImages([])}>Clear photos</button>
