@@ -45,6 +45,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
   const [addError, setAddError] = useState('')
   const [photoBusy, setPhotoBusy] = useState('') // id of the item whose photo is uploading
   const [photoError, setPhotoError] = useState('')
+  const [photoToRemove, setPhotoToRemove] = useState<Item | null>(null)
   const list = shop.items.filter((i) => inBranch(branch, i.branches?.name))
   const save = (id: string, patch: object) => shop.act(supabase.from('items').update(patch).eq('id', id))
   const set = (k: string, v: string) => setF({ ...f, [k]: v })
@@ -96,7 +97,6 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
   }
 
   async function removePhoto(item: Item) {
-    if (!window.confirm(`Remove the photo of ${item.name}?`)) return
     setPhotoBusy(item.id)
     setPhotoError('')
     const existing = ((item as Item & { image_urls?: string[] | null }).image_urls?.length
@@ -115,6 +115,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       await shop.reload()
     }
     setPhotoBusy('')
+    setPhotoToRemove(null)
   }
 
   const add = async (e: FormEvent) => {
@@ -224,7 +225,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
                           />
                         </label>
                         {img && !busy && (
-                          <button type="button" className="text-left text-cleaning underline" onClick={() => removePhoto(i)}>Remove</button>
+                          <button type="button" className="text-left text-cleaning underline" onClick={() => setPhotoToRemove(i)}>Remove</button>
                         )}
                       </div>
                     </div>
@@ -307,6 +308,30 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
           </div>
         </form>
       </section>
+
+      {photoToRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" onMouseDown={(e) => {
+          if (e.target === e.currentTarget) setPhotoToRemove(null)
+        }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="remove-photo-title"
+            className="w-full max-w-md rounded-sm bg-white p-6 shadow-lg">
+            <h2 id="remove-photo-title" className="text-xl font-bold">Remove photo?</h2>
+            <p className="mt-2 text-sm text-ink/70">
+              Remove the photo of <span className="font-semibold text-ink">{photoToRemove.name}</span>?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" className="rounded-sm border border-ink/20 px-4 py-2 text-sm font-semibold"
+                onClick={() => setPhotoToRemove(null)} disabled={photoBusy === photoToRemove.id}>
+                Cancel
+              </button>
+              <button type="button" className="rounded-sm bg-cleaning px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                onClick={() => removePhoto(photoToRemove)} disabled={photoBusy === photoToRemove.id}>
+                {photoBusy === photoToRemove.id ? 'Removing…' : 'Remove photo'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
