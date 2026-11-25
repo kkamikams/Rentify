@@ -236,16 +236,23 @@ export default function CustomerApp({
 
       {view === 'home' && (
         <>
-          <section className="bg-reserved">
-            <div className="mx-auto max-w-10xl px-12 py-16">
-            <h1 className="text-4xl font-bold leading-snug" style={{ fontFamily: "'Dela Gothic One', sans-serif" }}>
+          <section className="relative overflow-hidden bg-reserved">
+            <img
+              src="/kaboompics_neutral-sweaters-displayed-on-wall-mounted-rail-15369.jpg"
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover object-right"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#F8F3EB]/90 via-[#F8F3EB]/65 to-[#F8F3EB]/15" />
+            <div className="relative z-10 mx-auto max-w-10xl px-12 py-16">
+              <h1 className="text-4xl font-bold leading-snug" style={{ fontFamily: "'Dela Gothic One', sans-serif" }}>
                 Dress for the moment,<br /> Rent it with{' '}
-              <span
-                className="text-7xl font-normal"
-                style={{ fontFamily: "'Waterfall', cursive" }}>
-                Rentify.
-              </span>
-            </h1>
+                <span
+                  className="text-7xl font-normal"
+                  style={{ fontFamily: "'Waterfall', cursive" }}>
+                  Rentify.
+                </span>
+              </h1>
               <p className="mb-6 mt-3 text-xs">Find your perfect outfit for every occasion.</p>
               <button onClick={() => go('catalog')} className="rounded-sm bg-[#45352F] px-5 py-2.5 text-sm font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
                 Browse Rentals →
@@ -261,15 +268,7 @@ export default function CustomerApp({
             </div>
             <div className="grid grid-cols-2 gap-7 sm:grid-cols-4">
               {CATS.map((c) => (
-                <div key={c}
-                  className="flex h-96 flex-col justify-end bg-cover bg-center p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]"
-                  style={{
-                    backgroundImage: (() => {
-                      const shop = cat.shops.find((s) => s.category_images?.[c])
-                      const url = shop?.category_images?.[c]
-                      return url ? `url(${url})` : undefined
-                    })(),
-                  }}>
+                <div key={c} className="flex h-96 flex-col justify-end bg-white p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]">
                   <button onClick={() => go('catalog', c)} className="w-full rounded-sm bg-[#A66F5B] py-4 text-xl font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
                     {label(c)}{c === 'Costume' ? 's' : ''}
                   </button>
@@ -293,7 +292,8 @@ export default function CustomerApp({
           </section>
 
           <footer className="bg-ink px-10 py-20 text-xs text-cream">
-          <div className="mx-auto grid max-w-6xl grid-cols-2 gap-64">    <div className="space-y-3">
+            <div className="mx-auto grid max-w-6xl grid-cols-2 gap-64">
+              <div className="space-y-3">
                 <p className="text-sm font-semibold">Rentify.</p>
                 <p>Search</p>
                 <p>Book A Fitting</p>
