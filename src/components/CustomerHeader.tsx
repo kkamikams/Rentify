@@ -1,4 +1,4 @@
-import { MessageCircle, ShoppingBag, User } from 'lucide-react'
+import { MessageCircle, User } from 'lucide-react'
 
 export default function CustomerHeader({
   name, showBranches, branch, branchNames, activeAccountPage, onHome, onBranchChange, onMessages, onProfile, onBookings,
@@ -15,7 +15,7 @@ export default function CustomerHeader({
   onBookings: () => void
 }) {
   return (
-    <header className="sticky top-[32px] z-40 bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
+    <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
       <div className="mx-auto flex max-w-10xl items-center px-6 py-4">
       <button onClick={onHome} aria-label="Rentify home" className="text-2xl font-semibold">
         Rentify.
@@ -42,10 +42,14 @@ export default function CustomerHeader({
             className={activeAccountPage === 'profile' ? 'text-booked' : undefined}>
             <User size={20} fill="currentColor" />
           </button>
-          <button onClick={onBookings} title="My bookings" aria-label="My bookings"
+          <button
+            onClick={onBookings}
+            title="My bookings"
+            aria-label="My bookings"
             aria-current={activeAccountPage === 'bookings' ? 'page' : undefined}
-            className={activeAccountPage === 'bookings' ? 'text-booked' : undefined}>
-            <ShoppingBag size={20} fill="currentColor" />
+            className={`-ml-1.5 flex items-center justify-center ${activeAccountPage === 'bookings' ? 'opacity-70' : ''}`}
+          >
+            <img src="/bookings.png" alt="My bookings" className="block h-8 w-8 object-contain" />
           </button>
         </div>
       </div>

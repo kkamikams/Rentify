@@ -20,9 +20,9 @@ export function AccountLayout({ tab, onTab, children }: { tab: Tab; onTab: (t: T
     </button>
   )
   return (
-    <div className="mx-auto grid max-w-5xl gap-8 px-6 py-8 md:grid-cols-[140px_1fr]">
-      <nav className="space-y-3">{item('profile', 'Profile')}{item('bookings', 'My bookings')}</nav>
-      <div>{children}</div>
+    <div className="mx-auto grid w-full max-w-6xl items-start gap-10 px-6 py-8 md:grid-cols-[160px_1fr]">
+      <nav className="pt-1 space-y-4">{item('profile', 'Profile')}{item('bookings', 'My bookings')}</nav>
+      <div className="min-w-0 w-full">{children}</div>
     </div>
   )
 }

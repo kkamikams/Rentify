@@ -62,12 +62,21 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
   const [cond, setCond] = useState('Good')
   const [paid, setPaid] = useState(!!b.deposit_received || !!b.payment_ref)
   const [method, setMethod] = useState(b.payment_method ?? (b.payment_ref ? 'GCash' : 'Cash'))
-  const [waive, setWaive] = useState(false)
+  const [lateFeePerDay, setLateFeePerDay] = useState(fee)
+  const [lateAdjustment, setLateAdjustment] = useState<'none' | 'waive' | 'percent' | 'peso'>('none')
+  const [lateAdjustmentValue, setLateAdjustmentValue] = useState(0)
   const [msg, setMsg] = useState('')
 
   const missing = ps.filter((p) => !ticked[p.name])
   const missingFee = missing.reduce((s, p) => s + p.price, 0)
-  const lateFee = waive ? 0 : late * fee
+  const baseLateFee = late * lateFeePerDay
+  const lateFee = lateAdjustment === 'waive'
+    ? 0
+    : lateAdjustment === 'percent'
+      ? Math.round(baseLateFee * (1 - Math.max(0, lateAdjustmentValue) / 100))
+      : lateAdjustment === 'peso'
+        ? Math.max(0, baseLateFee - Math.max(0, lateAdjustmentValue))
+        : baseLateFee
   const refund = Math.max(0, deposit - missingFee - lateFee)
   const update = (patch: object) => shop.act(supabase.from('bookings').update(patch).eq('id', b.id))
   const lateEndDate = addDays(deadline, late)
@@ -87,9 +96,10 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
 
   const complete = () =>
     update({
-      status: 'returned', days_late: late, late_fee_waived: waive, late_fee: lateFee,
+      status: 'returned', days_late: late, late_fee_waived: lateAdjustment === 'waive', late_fee: lateFee,
       late_fee_note: [
         missing.length ? `Missing: ${missing.map((p) => p.name).join(', ')} (${peso(missingFee)})` : '',
+        lateAdjustment !== 'none' ? `Late fee adjustment: ${lateAdjustment === 'waive' ? 'Waived' : `${peso(lateAdjustmentValue)}${lateAdjustment === 'percent' ? '%' : ''} discount`}` : '',
         cond !== 'Good' ? `Condition: ${cond}` : '',
       ].filter(Boolean).join('. ') || null,
     })
@@ -119,7 +129,7 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
         <p className="mb-4 text-base font-semibold">Customer asked for 1 more rental day (new return deadline {fmt(returnDeadline(addDays(b.end_date, 1), b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}).</p>
       )}
 
-      <ul className="mb-5 border-b border-ink/15">
+      <ul className="mb-5">
         {ps.map((p) => (
           <li key={p.name} className="flex items-center justify-between border-t border-ink/15 py-4 first:border-t-0">
             <label className="flex cursor-pointer items-center gap-4 font-medium">
@@ -140,12 +150,48 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
                 {Array.from(new Set([...Array(15).keys(), late])).sort((x, y) => x - y).map((n) => <option key={n}>{n}</option>)}
               </select>
             </label>
-            <label className="text-base text-ink/70">Condition
-              <select className={`${input} mt-1 py-3`} value={cond} onChange={(e) => setCond(e.target.value)}>
-                {['Good', 'Needs cleaning', 'Needs repair', 'Damaged'].map((c) => <option key={c}>{c}</option>)}
+          <label className="text-base text-ink/70">Condition
+            <select
+              className={`${input} mt-1 py-3`} value={cond}onChange={(e) => setCond(e.target.value)}>
+              {['Good', 'Needs cleaning', 'Needs repair', 'Damaged'].map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </label>
+          </div>
+          <div className="mb-5 grid grid-cols-2 gap-10">
+          <label className="text-base text-ink/70">Late fee per day (₱)
+            <input
+              type="number"
+              min={0}
+              className={`${input} mt-1 py-3 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+              value={lateFeePerDay}
+              onChange={(e) => setLateFeePerDay(Math.max(0, Number(e.target.value) || 0))}
+            />
+          </label>
+            <label className="text-base text-ink/70">Late fee adjustment
+              <select className={`${input} mt-1 py-3`} value={lateAdjustment} onChange={(e) => {
+                setLateAdjustment(e.target.value as 'none' | 'waive' | 'percent' | 'peso')
+                setLateAdjustmentValue(0)
+              }}>
+                <option value="none">None</option>
+                <option value="waive">Waive late fee</option>
+                <option value="percent">Discount (%)</option>
+                <option value="peso">Discount (₱)</option>
               </select>
             </label>
           </div>
+            {(lateAdjustment === 'percent' || lateAdjustment === 'peso') && (
+                        <label className="mb-5 block max-w-sm text-base text-ink/70">
+                          {lateAdjustment === 'percent' ? 'Discount percentage' : 'Discount amount'}
+                          <input
+                            type="number"
+                            min={0}
+                            max={lateAdjustment === 'percent' ? 100 : undefined}
+                            className={`${input} mt-1 py-3 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+                            value={lateAdjustmentValue}
+                            onChange={(e) => setLateAdjustmentValue(Math.max(0, Number(e.target.value) || 0))}
+                          />
+                        </label>
+                      )}
           {late > 0 && nextRisk && (
             <p className="mb-5 rounded-sm border border-cleaning/30 bg-cleaning/10 px-4 py-3 text-sm font-semibold text-cleaning">
               Late return puts the next pickup at risk: {nextRisk.customer_name ?? 'A customer'} is due to pick up
@@ -155,9 +201,7 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
           <div className="mb-5 space-y-1 border-t border-ink/15 pt-4 text-base">
             <div className="flex justify-between"><span>Missing: {missing.length ? missing.map((p) => p.name).join(', ') : 'None'}</span><span>{peso(missingFee)}</span></div>
             <div className="flex items-center justify-between">
-              <span>Late fee ({late} × {peso(fee)})
-                <label className="ml-3 text-sm text-ink/60"><input type="checkbox" className="mr-1 accent-booked" checked={waive} onChange={(e) => setWaive(e.target.checked)} />Waive</label>
-              </span>
+              <span>Late fee ({late} × {peso(lateFeePerDay)})</span>
               <span>{peso(lateFee)}</span>
             </div>
             <div className="flex justify-between"><span>Deposit {peso(deposit)}, refund</span><b className="text-green-800">{peso(refund)}</b></div>

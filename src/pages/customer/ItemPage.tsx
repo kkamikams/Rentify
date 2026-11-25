@@ -28,6 +28,7 @@ export default function ItemPage({
   const [blockReason, setBlockReason] = useState('')
   const images = itemImages(item)
   const [photoIndex, setPhotoIndex] = useState(0)
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
 
   const end = addDays(start, days - 1)
   const price = item.price_per_day ?? 0
@@ -121,16 +122,38 @@ export default function ItemPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-2 py-6">
-      <button onClick={onBack} className="mb-6 flex items-center gap-1 text-sm"><ChevronLeft size={16} /> Back</button>
+    <div className="mx-auto max-w-6xl px-2 py-5">
+      <button onClick={onBack} className="mb-5 flex items-center gap-1 text-sm"><ChevronLeft size={30} /> Back</button>
       <div className="grid gap-6 md:grid-cols-[1.15fr_1.85fr]">
         <div>
-          <div className="relative aspect-[3/4] overflow-hidden bg-white shadow-sm">
-            {images[photoIndex] && <img src={images[photoIndex]} alt={`${item.name} photo ${photoIndex + 1}`} className="h-full w-full object-contain" />}
+          <div
+            className="relative aspect-[3/4] touch-pan-y overflow-hidden bg-white shadow-sm"
+            onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)}
+            onTouchEnd={(event) => {
+              if (touchStartX === null || images.length < 2) return
+              const endX = event.changedTouches[0]?.clientX ?? touchStartX
+              const distance = touchStartX - endX
+              if (Math.abs(distance) > 45) {
+                const nextIndex = (photoIndex + (distance > 0 ? 1 : -1) + images.length) % images.length
+                setPhotoIndex(nextIndex)
+              }
+              setTouchStartX(null)
+            }}
+          >
+            <div
+              className="flex h-full transition-transform duration-500 ease-out"
+              style={{ width: `${images.length * 100}%`, transform: `translateX(-${photoIndex * (100 / images.length)}%)` }}
+            >
+              {images.map((image, index) => (
+                <div key={image} className="h-full shrink-0" style={{ width: `${100 / images.length}%` }}>
+                  <img src={image} alt={`${item.name} photo ${index + 1}`} className="h-full w-full object-cover" draggable={false} />
+                </div>
+              ))}
+            </div>
             {images.length > 1 && (
               <>
-                <button type="button" aria-label="Previous photo" onClick={() => setPhotoIndex((photoIndex - 1 + images.length) % images.length)} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronLeft size={18} /></button>
-                <button type="button" aria-label="Next photo" onClick={() => setPhotoIndex((photoIndex + 1) % images.length)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronRight size={18} /></button>
+                <button type="button" aria-label="Previous photo" onClick={() => setPhotoIndex((photoIndex - 1 + images.length) % images.length)} className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronLeft size={18} /></button>
+                <button type="button" aria-label="Next photo" onClick={() => setPhotoIndex((photoIndex + 1) % images.length)} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronRight size={18} /></button>
               </>
             )}
           </div>
@@ -138,7 +161,7 @@ export default function ItemPage({
             <div className="mt-3 grid grid-cols-4 gap-2">
               {images.map((image, index) => (
                 <button key={image} type="button" onClick={() => setPhotoIndex(index)} className={`aspect-square overflow-hidden border-2 ${photoIndex === index ? 'border-ink' : 'border-transparent'}`}>
-                  <img src={image} alt="" className="h-full w-full object-contain" />
+                  <img src={image} alt="" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>

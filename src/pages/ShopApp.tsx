@@ -241,8 +241,8 @@ export default function ShopApp({
 
   return (
     <div className="min-h-screen bg-cream">
-      <header className="border-t-4 border-ink bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+      <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-12 py-4">
           <span className="text-xl font-semibold">Rentify.</span>
           <nav className="flex flex-1 justify-center gap-16">
             {multi ? (
@@ -269,7 +269,7 @@ export default function ShopApp({
       </header>
 
       <nav className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-8 py-4">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-12 py-4">
           {TABS.map(({ id, icon: Icon, title }) => (
             <button key={id} title={title} aria-label={title} onClick={() => setTab(id)}
               className={`pb-1 ${tab === id ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
@@ -279,7 +279,7 @@ export default function ShopApp({
         </div>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-8 py-8">
+      <main className="mx-auto max-w-[1440px] px-12 py-10">
         <h1 className="mb-8 inline-block border-b border-ink/30 pb-1 pr-12 text-lg font-medium">{title}</h1>
         {shop.error && <p className="mb-4 text-sm text-cleaning">{shop.error}</p>}
         {pages[tab]}

@@ -157,7 +157,7 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
 
   const now = today()
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="w-full">
       {err && <p className="mb-3 text-sm text-cleaning">{err}</p>}
       {success && <p role="status" className="mb-3 text-sm text-green-800">{success}</p>}
       {loading && <p className="text-sm text-ink/60">Loading...</p>}

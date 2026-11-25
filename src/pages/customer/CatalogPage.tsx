@@ -7,11 +7,11 @@ import { peso } from '../../lib/shop'
 export function ItemCard({ item, onOpen, showBranch = false }: { item: CItem; onOpen: () => void; showBranch?: boolean }) {
   const [hovered, setHovered] = useState(false)
   const images = itemImages(item)
-  const image = hovered && images.length > 1 ? images[1] : (images[0] ?? null)
   return (
     <button onClick={onOpen} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} className="text-left">
-      <div className="mb-2 aspect-[3/4] w-full overflow-hidden bg-white shadow-sm">
-        {image && <img src={image} alt={item.name} className="h-full w-full object-cover transition-opacity duration-200" />}
+      <div className="relative mb-2 aspect-[3/4] w-full overflow-hidden bg-white shadow-sm">
+        {images[0] && <img src={images[0]} alt={item.name} className="absolute inset-0 h-full w-full object-cover transition-opacity duration-600 ease-in-out" />}
+        {images[1] && <img src={images[1]} alt="" aria-hidden="true" className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-600 ease-in-out ${hovered ? 'opacity-100' : 'opacity-0'}`} />}
       </div>
       <div className="text-sm">{item.name}</div>
       <div className="text-sm">

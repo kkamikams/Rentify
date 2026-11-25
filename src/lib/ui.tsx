@@ -5,7 +5,7 @@ export const btn =
   'rounded-sm bg-booked px-4 py-2 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)] disabled:opacity-50'
 export const btn2 =
   'rounded-sm bg-cell px-4 py-2 text-sm font-semibold text-ink shadow-[0_2px_3px_rgba(0,0,0,0.2)]'
-export const input = 'w-full rounded-sm border border-ink/25 bg-white px-2 py-1.5 text-sm text-ink'
+export const input = 'w-full rounded-sm border border-ink/25 bg-white px-2 pr-9 py-1.5 text-sm text-ink'
 export const th = 'py-2 pr-4 text-left text-sm font-semibold'
 export const td = 'border-t border-ink/15 py-2 pr-4 text-sm'
 

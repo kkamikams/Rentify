@@ -127,11 +127,11 @@ const Instagram = () => (
 function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOpen: () => void }) {
   const [hovered, setHovered] = useState(false)
   const images = itemImages(p.rows[0])
-  const img = hovered && images.length > 1 ? images[1] : (images[0] ?? null)
   return (
     <button onClick={onOpen} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} className="h-[445px] w-full text-left">
-      <div className="h-96 w-full overflow-hidden bg-white">
-        {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
+      <div className="relative h-96 w-full overflow-hidden bg-white">
+        {images[0] && <img src={images[0]} alt={p.name} className="absolute inset-0 h-full w-full object-cover transition-opacity duration-600 ease-in-out" />}
+        {images[1] && <img src={images[1]} alt="" aria-hidden="true" className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-600 ease-in-out ${hovered ? 'opacity-100' : 'opacity-0'}`} />}
       </div>
       <p className="mt-2 h-5 text-[13px] leading-5">{p.name}</p>
       <p className="h-5 text-[11px]"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
@@ -209,13 +209,14 @@ export default function CustomerApp({
 
   return (
     <div className="min-h-screen bg-cream">
-      {!account && (
-        <div className="sticky top-0 z-50 bg-ink py-2 text-center text-[11px] font-medium tracking-wide text-cream">
-          {view === 'home' ? 'YOUR NEXT OCCASION, YOUR PERFECT OUTFIT.' : 'FIND YOUR FIT'}
-        </div>
-      )}
+      <div className="sticky top-0 z-50">
+        {!account && (
+          <div className="bg-ink py-2 text-center text-[11px] font-medium tracking-wide text-cream">
+            {view === 'home' ? 'YOUR NEXT OCCASION, YOUR PERFECT OUTFIT.' : 'FIND YOUR FIT'}
+          </div>
+        )}
 
-      <CustomerHeader
+        <CustomerHeader
         name={name}
         showBranches={multi && !account}
         branch={view === 'catalog' ? active : ''}
@@ -226,7 +227,8 @@ export default function CustomerApp({
         onMessages={() => { setMsgBranch(undefined); go('messages') }}
         onProfile={() => go('profile')}
         onBookings={() => go('bookings')}
-      />
+        />
+      </div>
 
       {session && <CustomerProfileSetup key={session.user.id} user={session.user} />}
 
@@ -252,7 +254,11 @@ export default function CustomerApp({
           </section>
 
           <section className="px-10 py-10">
-            <h2 className="mb-6 inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">RENT BY CATEGORY</h2>
+            <div className="mb-10 text-center">
+              <h2 className="inline-block border-b-2 border-ink pb-1 text-m font-medium tracking-wide">
+                RENT BY CATEGORY
+              </h2>
+            </div>
             <div className="grid grid-cols-2 gap-7 sm:grid-cols-4">
               {CATS.map((c) => (
                 <div key={c} className="flex h-96 flex-col justify-end bg-white p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]">
@@ -263,7 +269,11 @@ export default function CustomerApp({
               ))}
             </div>
 
-            <h2 className="mb-6 mt-10 inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">NEW ARRIVALS</h2>
+            <div className="mb-7 mt-7 text-center">
+              <h2 className="inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">
+                NEW ARRIVALS
+              </h2>
+            </div>
             <div className="flex gap-5 overflow-x-auto pb-4">
               {products.map((p) => (
                 <div key={p.name} className="w-72 shrink-0">
@@ -271,7 +281,7 @@ export default function CustomerApp({
                 </div>
               ))}
             </div>
-            {products.length === 0 && !cat.error && <p className="text-sm text-ink/60">No items yet.</p>}
+            {products.length === 0 && !cat.error && <p className="text-center text-sm text-ink/60">No items yet.</p>}
           </section>
 
           <footer className="bg-ink px-10 py-20 text-xs text-cream">
@@ -340,7 +350,14 @@ export default function CustomerApp({
 
       {view === 'profile' && session && (
         <AccountLayout tab="profile" onTab={(tab) => go(tab)}>
-          <ProfilePage session={session} onSignOut={onSignOut} />
+          <ProfilePage
+            session={session}
+            onSignOut={() => {
+              setView('home')
+              window.scrollTo(0, 0)
+              onSignOut()
+            }}
+          />
         </AccountLayout>
       )}
 

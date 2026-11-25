@@ -67,12 +67,14 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
         : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
       if (existing.length >= 4) throw new Error('An item can have up to 4 photos.')
       const next = [...existing, uploaded.url].slice(0, 4)
-      const { error } = await supabase.from('items').update({ image_url: next[0], image_urls: next }).eq('id', item.id)
+      let { error } = await supabase.from('items').update({ image_url: next[0], image_urls: next }).eq('id', item.id)
+      if (error?.message.includes('image_urls')) {
+        const fallback = await supabase.from('items').update({ image_url: next[0] }).eq('id', item.id)
+        error = fallback.error
+      }
       if (error) throw new Error(error.message)
 
-      // Best effort: delete the old photo so storage doesn't fill up
-      const oldPath = pathFromUrl(imageOf(item))
-      if (oldPath) await supabase.storage.from(BUCKET).remove([oldPath])
+      // Keep old covers when adding another angle; removing photos handles storage cleanup.
 
       await shop.reload()
     } catch (e) {
@@ -92,7 +94,11 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       ? (item as Item & { image_urls?: string[] | null }).image_urls
       : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
     const next = existing.slice(1)
-    const { error } = await supabase.from('items').update({ image_url: next[0] ?? null, image_urls: next }).eq('id', item.id)
+    let { error } = await supabase.from('items').update({ image_url: next[0] ?? null, image_urls: next }).eq('id', item.id)
+    if (error?.message.includes('image_urls')) {
+      const fallback = await supabase.from('items').update({ image_url: next[0] ?? null }).eq('id', item.id)
+      error = fallback.error
+    }
     if (error) setPhotoError(error.message)
     else {
       const oldPath = pathFromUrl(imageOf(item))
@@ -132,7 +138,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       imageUrl = uploadedGallery[0] ?? null
 
       const rule = shop.rules.find((r) => r.category === f.category)
-      const { error: insertError } = await supabase.from('items').insert({
+      let insertQuery = supabase.from('items').insert({
         shop_id: shop.shopId, name: f.name.trim(), category: f.category,
         branch_id: f.branch_id || shop.branches[0]?.id, price_per_day: Number(f.price) || 0,
         deposit: Number(f.deposit) || rule?.deposit || 0,
@@ -141,6 +147,19 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
         size_info: f.sizes.trim() || null, buffer_days: rule?.buffer_days ?? 2,
         image_url: imageUrl, image_urls: uploadedGallery,
       })
+      let { error: insertError } = await insertQuery
+      if (insertError?.message.includes('image_urls')) {
+        const fallbackInsert = await supabase.from('items').insert({
+          shop_id: shop.shopId, name: f.name.trim(), category: f.category,
+          branch_id: f.branch_id || shop.branches[0]?.id, price_per_day: Number(f.price) || 0,
+          deposit: Number(f.deposit) || rule?.deposit || 0,
+          late_fee_per_day: rule?.late_fee_per_day ?? 0,
+          inclusions: f.inclusions.trim() || null,
+          size_info: f.sizes.trim() || null, buffer_days: rule?.buffer_days ?? 2,
+          image_url: imageUrl,
+        })
+        insertError = fallbackInsert.error
+      }
       if (insertError) {
         if (imagePath) {
           const { error: cleanupError } = await supabase.storage.from(BUCKET).remove([imagePath])
@@ -153,6 +172,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       }
 
       await shop.reload()
+      console.log('Saved item image gallery:', uploadedGallery)
       setF({ ...f, name: '', price: '', deposit: '', inclusions: '', sizes: '' })
       setImages([])
     } catch (error) {

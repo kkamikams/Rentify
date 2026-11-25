@@ -7,6 +7,7 @@
 @layer base {
   html { font-family: 'Geologica', system-ui, sans-serif; }
   body { @apply bg-cream text-ink antialiased; margin: 0; }
+select { padding-right: 2.25rem; }
   :focus-visible { outline: 2px solid #A9705F; outline-offset: 2px; }
 }
 

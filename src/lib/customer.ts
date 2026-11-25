@@ -31,7 +31,7 @@ export const STATUS_LABEL: Record<string, string> = {
 }
 export const itemImages = (item: CItem) => {
   const extra = item.image_urls ?? []
-  return [...new Set(extra.length ? extra : (item.image_url ? [item.image_url] : []))]
+  return [...new Set([...(item.image_url ? [item.image_url] : []), ...extra])]
     .filter((url): url is string => !!url)
     .slice(0, 4)
 }
