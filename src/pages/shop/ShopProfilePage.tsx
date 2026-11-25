@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { CalendarCheck, CreditCard, MapPin, Package, Store, UserRound } from 'lucide-react'
+import { CalendarCheck, Camera, CreditCard, MapPin, Package, Store, UserRound } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Shop } from '../../lib/shop'
-import { norm } from '../../lib/shop'
+import { CATEGORIES, norm } from '../../lib/shop'
 import { card } from '../../lib/ui'
 import { isValidName, digitsOnly, isValidPhone } from '../../lib/name'
 
@@ -37,6 +37,8 @@ export default function ShopProfilePage({
   const [editingPayment, setEditingPayment] = useState(false)
   const [branchNames, setBranchNames] = useState<Record<string, string>>({})
   const [editingBranches, setEditingBranches] = useState(false)
+  const [categoryImages, setCategoryImages] = useState<Record<string, string>>({})
+  const [categoryBusy, setCategoryBusy] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -60,19 +62,25 @@ export default function ShopProfilePage({
   useEffect(() => {
     if (!shop.shopId) return
     let active = true
-    supabase.from('shops').select('pay_number, pay_name').eq('id', shop.shopId).maybeSingle()
-      .then(({ data, error: paymentError }) => {
-        if (!active) return
-        if (paymentError) {
-          setError(paymentError.message)
-          return
-        }
-        if (data) {
-          const currentPayment = { number: data.pay_number ?? '', name: data.pay_name ?? '' }
-          setPayment(currentPayment)
-          setSavedPayment(currentPayment)
-        }
-      })
+    void (async () => {
+      let result = await supabase.from('shops')
+        .select('pay_number, pay_name, category_images').eq('id', shop.shopId).maybeSingle()
+      if (result.error?.message.includes('category_images')) {
+        result = await supabase.from('shops')
+          .select('pay_number, pay_name').eq('id', shop.shopId).maybeSingle()
+      }
+      if (!active) return
+      if (result.error) {
+        setError(result.error.message)
+        return
+      }
+      if (result.data) {
+        const currentPayment = { number: result.data.pay_number ?? '', name: result.data.pay_name ?? '' }
+        setPayment(currentPayment)
+        setSavedPayment(currentPayment)
+      }
+      setCategoryImages((result.data?.category_images as Record<string, string> | null) ?? {})
+    })()
     return () => { active = false }
   }, [shop.shopId])
 
@@ -153,6 +161,85 @@ export default function ShopProfilePage({
     setEditingBranches(false)
   }
 
+  async function uploadCategoryPhoto(category: string, file: File) {
+    if (!shop.shopId) {
+      setError('Shop details are still loading. Please try again.')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setError('Choose an image file.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be under 5 MB.')
+      return
+    }
+
+    setCategoryBusy(category)
+    setError('')
+    const extension = file.type.split('/')[1].replace('jpeg', 'jpg')
+    const path = `${shop.shopId}/categories/${category.toLowerCase().replace(/\s+/g, '-')}-${crypto.randomUUID()}.${extension}`
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('item-images')
+        .upload(path, file, { contentType: file.type, cacheControl: '3600' })
+      if (uploadError) throw new Error(uploadError.message)
+
+      const url = supabase.storage.from('item-images').getPublicUrl(path).data.publicUrl
+      const next = { ...categoryImages, [category]: url }
+      const { data, error: saveError } = await supabase.from('shops')
+        .update({ category_images: next }).eq('id', shop.shopId).select('id')
+      if (saveError || !data?.length) {
+        await supabase.storage.from('item-images').remove([path])
+        throw new Error(saveError?.message ?? 'Could not save the category photo. Your account may not have shop owner permission.')
+      }
+
+      const oldUrl = categoryImages[category]
+      setCategoryImages(next)
+      if (oldUrl) {
+        const marker = '/item-images/'
+        const index = oldUrl.indexOf(marker)
+        if (index >= 0) {
+          const oldPath = decodeURIComponent(oldUrl.slice(index + marker.length).split('?')[0])
+          await supabase.storage.from('item-images').remove([oldPath])
+        }
+      }
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to upload category photo.')
+    } finally {
+      setCategoryBusy('')
+    }
+  }
+
+  async function removeCategoryPhoto(category: string) {
+    if (!shop.shopId) return
+    setCategoryBusy(category)
+    setError('')
+    const next = { ...categoryImages }
+    const oldUrl = next[category]
+    delete next[category]
+    try {
+      const { data, error: saveError } = await supabase.from('shops')
+        .update({ category_images: next }).eq('id', shop.shopId).select('id')
+      if (saveError || !data?.length) {
+        throw new Error(saveError?.message ?? 'Could not remove the category photo.')
+      }
+      setCategoryImages(next)
+      if (oldUrl) {
+        const marker = '/item-images/'
+        const index = oldUrl.indexOf(marker)
+        if (index >= 0) {
+          const oldPath = decodeURIComponent(oldUrl.slice(index + marker.length).split('?')[0])
+          await supabase.storage.from('item-images').remove([oldPath])
+        }
+      }
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to remove category photo.')
+    } finally {
+      setCategoryBusy('')
+    }
+  }
+
   return (
     <div className="w-full">
       <section className={`${card} flex flex-wrap items-center gap-4`}>
@@ -209,6 +296,57 @@ export default function ShopProfilePage({
         {!editingBranches && shop.branches.length > 0 && (
           <button type="button" className={button} onClick={() => setEditingBranches(true)}>Edit location</button>
         )}
+      </section>
+
+      <section className={card}>
+        <div className="mb-2 flex items-center gap-2">
+          <Camera size={19} />
+          <h3 className="text-lg font-bold">Category photos</h3>
+        </div>
+        <p className="mb-5 text-sm text-ink/70">
+          Add a photo for each category shown on the customer homepage.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {CATEGORIES.map((category) => {
+            const image = categoryImages[category]
+            const busyCategory = categoryBusy === category
+            return (
+              <div key={category} className="overflow-hidden rounded-sm border border-ink/15 bg-white">
+                <div className="h-40 bg-cell bg-cover bg-center"
+                  style={image ? { backgroundImage: `url(${image})` } : undefined}>
+                  {!image && (
+                    <div className="flex h-full items-center justify-center text-sm text-ink/50">No photo</div>
+                  )}
+                </div>
+                <div className="p-3">
+                  <p className="mb-3 font-semibold">{category}</p>
+                  <div className="flex flex-wrap gap-3">
+                    <label className="cursor-pointer text-sm font-semibold underline">
+                      {busyCategory ? 'Saving…' : image ? 'Change photo' : 'Add photo'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={busyCategory}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) void uploadCategoryPhoto(category, file)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                    {image && (
+                      <button type="button" className="text-sm font-semibold text-cleaning underline"
+                        disabled={busyCategory} onClick={() => void removeCategoryPhoto(category)}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </section>
 
       <section className={card}>

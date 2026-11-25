@@ -9,7 +9,10 @@ export type CItem = {
   branches: { name: string } | null
 }
 export type CBranch = { id: string; shop_id: string; name: string }
-export type CShop = { id: string; name: string; pay_number: string | null; pay_name: string | null }
+export type CShop = {
+  id: string; name: string; pay_number: string | null; pay_name: string | null
+  category_images?: Record<string, string> | null
+}
 export type MyBooking = {
   id: string; item_id: string; start_date: string; end_date: string; status: string | null
   customer_id: string
@@ -52,11 +55,15 @@ export function useCatalog() {
     let active = true
 
     const load = async () => {
-      const [i, b, s] = await Promise.all([
+      const [i, b] = await Promise.all([
         supabase.from('items').select('*, branches(name)').order('name'),
         supabase.from('branches').select('id, shop_id, name').order('name'),
-        supabase.from('shops').select('id, name, pay_number, pay_name'),
       ])
+      let s = await supabase.from('shops')
+        .select('id, name, pay_number, pay_name, category_images')
+      if (s.error?.message.includes('category_images')) {
+        s = await supabase.from('shops').select('id, name, pay_number, pay_name')
+      }
       if (!active) return
       setError(i.error?.message ?? b.error?.message ?? s.error?.message ?? '')
       setItems((i.data ?? []) as unknown as CItem[])

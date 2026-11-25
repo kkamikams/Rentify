@@ -261,7 +261,15 @@ export default function CustomerApp({
             </div>
             <div className="grid grid-cols-2 gap-7 sm:grid-cols-4">
               {CATS.map((c) => (
-                <div key={c} className="flex h-96 flex-col justify-end bg-white p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]">
+                <div key={c}
+                  className="flex h-96 flex-col justify-end bg-cover bg-center p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]"
+                  style={{
+                    backgroundImage: (() => {
+                      const shop = cat.shops.find((s) => s.category_images?.[c])
+                      const url = shop?.category_images?.[c]
+                      return url ? `url(${url})` : undefined
+                    })(),
+                  }}>
                   <button onClick={() => go('catalog', c)} className="w-full rounded-sm bg-[#A66F5B] py-4 text-xl font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
                     {label(c)}{c === 'Costume' ? 's' : ''}
                   </button>
