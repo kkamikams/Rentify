@@ -22,7 +22,7 @@ function Field({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   )
 }
 
-export default function AuthPage() {
+export default function AuthPage({ onHome }: { onHome?: () => void }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [role, setRole] = useState<Role>('customer')
   const [fullName, setFullName] = useState('')
@@ -80,13 +80,15 @@ export default function AuthPage() {
         <div className="absolute bottom-24 left-[8%] h-28 w-64 rounded-full bg-white/50 blur-2xl" />
         <div className="absolute bottom-40 right-[10%] h-24 w-56 rounded-full bg-white/50 blur-2xl" />
       </div>
-      {/* Faint rings behind the card */}
-      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[46rem] w-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50" />
-      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[64rem] w-[64rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
 
       {/* Rentify wordmark: top-middle, links to the homepage */}
       <header className="relative z-10 flex justify-center pt-8">
-        <a href="/" aria-label="Rentify home" className="text-xl font-semibold tracking-tight text-ink">
+        <a
+          href="/"
+          aria-label="Rentify home"
+          onClick={(e) => { if (onHome) { e.preventDefault(); onHome() } }}
+          className="text-xl font-semibold tracking-tight text-ink"
+        >
           Rentify
         </a>
       </header>

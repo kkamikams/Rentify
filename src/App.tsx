@@ -18,6 +18,7 @@ export default function App() {
   const [shopName, setShopName] = useState('')
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
+  const [authOpen, setAuthOpen] = useState(false)
 
   // Accounts without a role (made before roles existed) are shop accounts
   const role = session?.user.user_metadata?.role === 'customer' ? 'customer' : 'shop'
@@ -29,7 +30,10 @@ export default function App() {
       setLoading(false)
     })
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => setSession(newSession)
+      (_event, newSession) => {
+        setSession(newSession)
+        if (newSession) setAuthOpen(false)
+      }
     )
     return () => listener.subscription.unsubscribe()
   }, [])
@@ -59,7 +63,11 @@ export default function App() {
 
   if (loading) return <p className="p-6">Loading...</p>
 
-  if (!session) return <AuthPage />
+  // Visitors can browse the homepage; account pages send them to the log in page
+  if (!session) {
+    if (authOpen) return <AuthPage onHome={() => setAuthOpen(false)} />
+    return <CustomerApp guest onNeedAuth={() => setAuthOpen(true)} onSignOut={() => {}} />
+  }
 
   if (role === 'customer') {
     return (

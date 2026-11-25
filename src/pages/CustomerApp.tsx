@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, MessageCircle, ShoppingBag, User } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { peso } from '../lib/shop'
 import { Tag } from '../lib/ui'
 import { useCatalog } from '../lib/customer'
 import type { CItem } from '../lib/customer'
-import CustomerHeader from '../components/CustomerHeader'
 import ItemPage, { SentPage } from './customer/ItemPage'
 import MyBookingsPage from './customer/MyBookingspage'
 import MessagesPage from './customer/MessagesPage'
-import ProfilePage from './customer/ProfilePage'
+import ProfilePage, { AccountLayout } from './customer/ProfilePage'
 
 type Product = { name: string; category: string | null; price: number; deposit: number; branches: string[]; rows: CItem[] }
 type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages' | 'profile'
@@ -130,7 +129,9 @@ function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOp
   )
 }
 
-export default function CustomerApp({ name, onSignOut }: { name?: string; onSignOut: () => void }) {
+export default function CustomerApp({
+  name, onSignOut, guest = false, onNeedAuth,
+}: { name?: string; onSignOut: () => void; guest?: boolean; onNeedAuth?: () => void }) {
   const cat = useCatalog()
   const [session, setSession] = useState<Session | null>(null)
   const [view, setView] = useState<View>('home')
@@ -179,7 +180,11 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
     (p) => (category === 'All' || p.category === category) && p.name.toLowerCase().includes(q.toLowerCase())
   )
 
-  const go = (v: View, c = 'All') => { setView(v); setCategory(c); window.scrollTo(0, 0) }
+  const go = (v: View, c = 'All') => {
+    // Visitors who aren't logged in are sent to the log in page for account pages
+    if (guest && (v === 'profile' || v === 'bookings' || v === 'messages')) { onNeedAuth?.(); return }
+    setView(v); setCategory(c); window.scrollTo(0, 0)
+  }
   const open = (p: Product) => {
     const r = p.rows.find((x) => x.branches?.name === active) ?? p.rows[0]
     setItemId(r.id)
@@ -199,19 +204,42 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
         </div>
       )}
 
-      <CustomerHeader
-        name={name}
-        showBranches={multi && !account}
-        branch={view === 'catalog' ? active : ''}
-        branchNames={branchNames}
-        activeAccountPage={view === 'profile' || view === 'bookings' ? view : undefined}
-        onHome={() => go('home')}
-        onBranchChange={(b) => { setBranch(b); go('catalog') }}
-        onMessages={() => { setMsgBranch(undefined); go('messages') }}
-        onProfile={() => go('profile')}
-        onBookings={() => go('bookings')}
-      />
+      <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <button onClick={() => go('home')} aria-label="Rentify home" className="text-xl font-semibold">Rentify.</button>
+          {multi && !account && (
+            <nav className="flex gap-10 text-sm font-medium">
+              {['All branches', ...branchNames].map((b) => (
+                <button key={b} onClick={() => { setBranch(b); go('catalog') }}
+                  className={`pb-0.5 ${view === 'catalog' && active === b ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
+                  {b}
+                </button>
+              ))}
+            </nav>
+          )}
+          <div className="flex items-center gap-5">
+            {name && !account && <span className="hidden text-sm sm:inline">{name}</span>}
+            {!account && (
+              <button onClick={() => { setMsgBranch(undefined); go('messages') }} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
+            )}
+            <button onClick={() => go('profile')} title="My profile" aria-label="My profile"><User size={20} fill="currentColor" /></button>
+            {!account && (
+              <button onClick={() => go('bookings')} title="My bookings" aria-label="My bookings">
+                <ShoppingBag size={20} fill="currentColor" />
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
 
+      {account && (
+        <div className="mx-auto max-w-6xl px-6 pt-4">
+          <button onClick={() => go('home')} aria-label="Back to home page"
+            title="Back to home page" className="flex items-center text-sm font-medium hover:underline">
+            <ArrowLeft size={18} />
+          </button>
+        </div>
+      )}
       {session && <CustomerProfileSetup key={session.user.id} user={session.user} />}
 
       {cat.error && <p className="px-6 pt-4 text-sm text-cleaning">{cat.error}</p>}
@@ -294,7 +322,7 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
           shop={cat.shops.find((s) => s.id === item.shop_id)}
           session={session}
           onBack={() => go('catalog')}
-          onNeedAuth={() => {}}
+          onNeedAuth={() => onNeedAuth?.()}
           onSent={(start, end) => { setSent({ start, end }); setView('sent'); window.scrollTo(0, 0) }}
         />
       )}
@@ -305,11 +333,15 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
       )}
 
       {view === 'profile' && session && (
-        <ProfilePage session={session} onSignOut={onSignOut} />
+        <AccountLayout tab="profile" onTab={(t) => go(t)}>
+          <ProfilePage session={session} onSignOut={onSignOut} />
+        </AccountLayout>
       )}
 
       {view === 'bookings' && (
-        <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
+        <AccountLayout tab="bookings" onTab={(t) => go(t)}>
+          <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
+        </AccountLayout>
       )}
 
       {view === 'messages' && session && (
