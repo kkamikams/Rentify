@@ -52,21 +52,31 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
   const previews = useMemo(() => images.map((file) => URL.createObjectURL(file)), [images])
   useEffect(() => () => { previews.forEach((url) => URL.revokeObjectURL(url)) }, [previews])
 
-  // Change (or first-time add) the photo of an existing item
-  async function changePhoto(item: Item, file: File | undefined) {
-    if (!file) return
-    const problem = checkImage(file)
-    if (problem) { setPhotoError(problem); return }
+  // Add one or more photos to an existing item.
+  async function changePhotos(item: Item, files: File[]) {
+    if (!files.length) return
     setPhotoBusy(item.id)
     setPhotoError('')
-    let uploaded: { path: string; url: string } | null = null
+
+    const existing = ((item as Item & { image_urls?: string[] | null }).image_urls?.length
+      ? (item as Item & { image_urls?: string[] | null }).image_urls
+      : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
+
+    if (existing.length + files.length > 4) {
+      setPhotoError(`This item already has ${existing.length} photo${existing.length === 1 ? '' : 's'}. A maximum of 4 photos is allowed.`)
+      setPhotoBusy('')
+      return
+    }
+
+    const uploaded: { path: string; url: string }[] = []
     try {
-      uploaded = await uploadImage(shop.shopId, file)
-      const existing = ((item as Item & { image_urls?: string[] | null }).image_urls?.length
-        ? (item as Item & { image_urls?: string[] | null }).image_urls
-        : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
-      if (existing.length >= 4) throw new Error('An item can have up to 4 photos.')
-      const next = [...existing, uploaded.url].slice(0, 4)
+      for (const file of files) {
+        const problem = checkImage(file)
+        if (problem) throw new Error(problem)
+        uploaded.push(await uploadImage(shop.shopId, file))
+      }
+
+      const next = [...existing, ...uploaded.map((photo) => photo.url)].slice(0, 4)
       let { error } = await supabase.from('items').update({ image_url: next[0], image_urls: next }).eq('id', item.id)
       if (error?.message.includes('image_urls')) {
         const fallback = await supabase.from('items').update({ image_url: next[0] }).eq('id', item.id)
@@ -74,13 +84,12 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       }
       if (error) throw new Error(error.message)
 
-      // Keep old covers when adding another angle; removing photos handles storage cleanup.
-
       await shop.reload()
     } catch (e) {
-      // Update failed, so remove the file we just uploaded
-      if (uploaded) await supabase.storage.from(BUCKET).remove([uploaded.path])
-      setPhotoError(e instanceof Error ? e.message : 'Unable to change photo.')
+      if (uploaded.length) {
+        await supabase.storage.from(BUCKET).remove(uploaded.map((photo) => photo.path))
+      }
+      setPhotoError(e instanceof Error ? e.message : 'Unable to change photos.')
     } finally {
       setPhotoBusy('')
     }
@@ -208,9 +217,10 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
                           <input
                             type="file"
                             accept="image/*"
+                            multiple
                             className="hidden"
                             disabled={busy}
-                            onChange={(e) => { changePhoto(i, e.target.files?.[0]); e.target.value = '' }}
+                            onChange={(e) => { changePhotos(i, Array.from(e.target.files ?? []).slice(0, 4)); e.target.value = '' }}
                           />
                         </label>
                         {img && !busy && (

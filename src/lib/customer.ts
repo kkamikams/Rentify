@@ -49,17 +49,30 @@ export function useCatalog() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    ;(async () => {
+    let active = true
+
+    const load = async () => {
       const [i, b, s] = await Promise.all([
         supabase.from('items').select('*, branches(name)').order('name'),
         supabase.from('branches').select('id, shop_id, name').order('name'),
         supabase.from('shops').select('id, name, pay_number, pay_name'),
       ])
+      if (!active) return
       setError(i.error?.message ?? b.error?.message ?? s.error?.message ?? '')
       setItems((i.data ?? []) as unknown as CItem[])
       setBranches((b.data ?? []) as unknown as CBranch[])
       setShops((s.data ?? []) as unknown as CShop[])
-    })()
+    }
+
+    void load()
+    const channel = supabase.channel('customer-catalog-items')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => void load())
+      .subscribe()
+
+    return () => {
+      active = false
+      void supabase.removeChannel(channel)
+    }
   }, [])
 
   return { items, branches, shops, error }
