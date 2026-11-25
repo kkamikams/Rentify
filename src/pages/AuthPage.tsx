@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { isValidName, digitsOnly, isValidPhone } from '../lib/name'
 
 type Role = 'customer' | 'shop'
 const LABEL: Record<Role, string> = { customer: 'Customer', shop: 'Shop owner' }
@@ -22,6 +23,15 @@ export default function AuthPage() {
     e.preventDefault()
     setError('')
     setInfo('')
+
+    if (mode === 'signup' && !isValidName(fullName)) {
+      setError('Full name must contain letters and cannot contain numbers.')
+      return
+    }
+    if (mode === 'signup' && role === 'customer' && !isValidPhone(phone)) {
+      setError('Enter your mobile number using 10 to 15 digits.')
+      return
+    }
     setBusy(true)
 
     if (mode === 'signup') {
@@ -85,9 +95,9 @@ export default function AuthPage() {
         <form onSubmit={submit} className="space-y-3">
           {mode === 'signup' && (
             <>
-              <input required className={inputCls} placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              <input required className={inputCls} placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value.replace(/[\p{N}\d]/gu, ''))} />
               {role === 'customer' && (
-                <input type="tel" className={inputCls} placeholder="Mobile number (09xx xxx xxxx)" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <input type="tel" inputMode="numeric" minLength={10} maxLength={15} pattern="[0-9]{10,15}" required className={inputCls} placeholder="Mobile number" value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} />
               )}
             </>
           )}

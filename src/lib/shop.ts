@@ -11,6 +11,7 @@ export type Booking = {
   id: string; shop_id: string; item_id: string
   customer_name: string | null; customer_phone: string | null
   start_date: string; end_date: string; status: string | null
+  return_grace_days: number | null
   buffer_days: number | null
   note: string | null; payment_ref: string | null; deposit_amount: number | null
   late_fee: number | null; items: Item | null
@@ -34,6 +35,8 @@ export const addDays = (s: string, n: number) => {
   const [y, m, d] = s.split('-').map(Number)
   return iso(new Date(y, m - 1, d + n))
 }
+export const DEFAULT_RETURN_GRACE_DAYS = 7
+export const returnDeadline = (end: string, graceDays = DEFAULT_RETURN_GRACE_DAYS) => addDays(end, graceDays)
 export const diffDays = (a: string, b: string) => Math.round((utc(b) - utc(a)) / 86400000)
 export const fmt = (s: string) => {
   const [y, m, d] = s.split('-').map(Number)
@@ -51,14 +54,19 @@ export const isSold = (b: Booking) => !isCancelled(b) && norm(b.status) !== 'pen
 export const branchName = (b: Booking) => b.items?.branches?.name ?? ''
 export const inBranch = (branch: string, name?: string) => branch === 'All branches' || name === branch
 
-// Another confirmed booking of the same item that overlaps these dates or their cleaning days
+// Another confirmed booking of the same item that overlaps its rental, grace, or cleaning days
 export function clash(b: Booking, all: Booking[]) {
-  const buf = b.buffer_days ?? b.items?.buffer_days ?? 0
+  const buffer = b.buffer_days ?? b.items?.buffer_days ?? 0
+  const start = addDays(b.start_date, -buffer)
+  const end = addDays(b.end_date, (b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + buffer)
   return all.find(
-    (o) =>
-      o.id !== b.id && o.item_id === b.item_id && isSold(o) &&
-      b.start_date <= addDays(o.end_date, o.buffer_days ?? o.items?.buffer_days ?? buf) &&
-      o.start_date <= addDays(b.end_date, buf)
+    (o) => {
+      if (o.id === b.id || o.item_id !== b.item_id || !isSold(o)) return false
+      const otherBuffer = o.buffer_days ?? o.items?.buffer_days ?? buffer
+      const otherStart = addDays(o.start_date, -otherBuffer)
+      const otherEnd = addDays(o.end_date, (o.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + otherBuffer)
+      return start <= otherEnd && otherStart <= end
+    }
   )
 }
 

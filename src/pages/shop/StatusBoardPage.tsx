@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabaseClient'
 import type { Shop } from '../../lib/shop'
-import { branchName, fmt, inBranch, norm } from '../../lib/shop'
+import { branchName, DEFAULT_RETURN_GRACE_DAYS, fmt, inBranch, norm, returnDeadline } from '../../lib/shop'
 import { btn, btn2 } from '../../lib/ui'
 
 const COLS: [string, string][] = [
@@ -25,7 +25,7 @@ export default function StatusBoardPage({ shop, branch }: { shop: Shop; branch: 
             <div key={b.id} className="mb-3 rounded-sm bg-white p-3 text-center shadow-sm">
               <div className="mb-2 border-b border-ink/20 pb-1 text-sm font-semibold">{branchName(b)}</div>
               <div className="text-sm font-bold">{b.items?.name}</div>
-              <div className="mb-2 text-sm">{b.customer_name} · {fmt(b.start_date)} - {fmt(b.end_date)}</div>
+              <div className="mb-2 text-sm">{b.customer_name} · {fmt(b.start_date)} - {fmt(b.end_date)} · return by {fmt(returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}</div>
               {key === 'pending' ? (
                 <div className="flex gap-1">
                   <button className={`${btn} flex-1 px-2 text-sm`} onClick={() => set(b.id, 'reserved')}>Confirm</button>

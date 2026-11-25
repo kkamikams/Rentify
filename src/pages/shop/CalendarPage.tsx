@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { digitsOnly, isValidName, isValidPhone } from '../../lib/name'
+import { DEFAULT_RETURN_GRACE_DAYS } from '../../lib/shop'
 
 type Booking = {
   id: string
   customer_name: string | null
   start_date: string // 'YYYY-MM-DD'
   end_date: string
+  return_grace_days: number | null
   buffer_days: number | null
   status: string | null
 }
@@ -52,13 +55,17 @@ const NEEDS_CLEANING = ['returned', 'in_transit', 'cleaning', 'completed']
 function cellFor(b: Booking, buffer: number, day: string, today: string) {
   const status = norm(b.status)
   if (status === 'cancelled' || status === 'canceled') return null
+  const graceEnd = addDays(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
 
   // Between start and end: color depends on the status
   if (day >= b.start_date && day <= b.end_date) {
     return { color: RENTAL_COLOR[status] ?? ('reserved' as Color), late: false }
   }
-  // Not returned after the end date: stays booked and flagged late until today
-  if (OUT.includes(status) && day > b.end_date && day <= today) {
+  if (!NEEDS_CLEANING.includes(status) && day > b.end_date && day <= graceEnd) {
+    return { color: RENTAL_COLOR[status] ?? ('reserved' as Color), late: false }
+  }
+  // Not returned after the grace period: stays booked and flagged late until today
+  if (OUT.includes(status) && day > graceEnd && day <= today) {
     return { color: 'booked' as Color, late: true }
   }
   // Buffer days after a return: cleaning
@@ -74,10 +81,14 @@ function blockedReason(item: Item, day: string, today: string) {
     if (status === 'cancelled' || status === 'canceled' || status === 'declined') continue
 
     const buffer = b.buffer_days ?? item.buffer_days ?? 0
+    const graceEnd = addDays(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
     if (day >= b.start_date && day <= b.end_date) {
-      return `Booked: ${b.customer_name ?? 'another customer'}`
+      return 'Booked: item is reserved'
     }
-    if (OUT.includes(status) && day > b.end_date && day <= today) {
+    if (!NEEDS_CLEANING.includes(status) && day > b.end_date && day <= graceEnd) {
+      return `Return grace period: item is unavailable until ${graceEnd}`
+    }
+    if (OUT.includes(status) && day > graceEnd && day <= today) {
       return 'Blocked: item is late and not yet returned'
     }
     if (NEEDS_CLEANING.includes(status) && day > b.end_date && day <= addDays(b.end_date, buffer)) {
@@ -89,19 +100,29 @@ function blockedReason(item: Item, day: string, today: string) {
 
 function rangeBlockedReason(item: Item, start: string, nights: number, today: string) {
   const end = addDays(start, nights - 1)
+  const requestedBuffer = item.buffer_days ?? 0
+  const requestedStart = addDays(start, -requestedBuffer)
+  const requestedEnd = addDays(end, DEFAULT_RETURN_GRACE_DAYS + requestedBuffer)
 
   for (const b of item.bookings) {
     const status = norm(b.status)
     if (status === 'cancelled' || status === 'canceled' || status === 'declined') continue
 
     const buffer = b.buffer_days ?? item.buffer_days ?? 0
+    const graceDays = NEEDS_CLEANING.includes(status)
+      ? 0
+      : b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS
+    const graceEnd = addDays(b.end_date, graceDays)
     const blockedStart = addDays(b.start_date, -buffer)
-    const blockedEnd = addDays(b.end_date, buffer)
-    if (start <= blockedEnd && blockedStart <= end) {
+    const blockedEnd = addDays(graceEnd, buffer)
+    if (requestedStart <= blockedEnd && blockedStart <= requestedEnd) {
       if (dayInsideBooking(start, end, b.start_date, b.end_date)) {
-        return `Booked: ${b.customer_name ?? 'another customer'}`
+        return 'Booked: item is reserved'
       }
-      if (OUT.includes(status) && start <= today && end >= b.end_date) {
+      if (graceDays && requestedStart <= graceEnd && requestedEnd > b.end_date) {
+        return `Unavailable during the ${graceDays}-day return grace period`
+      }
+      if (OUT.includes(status) && start <= today && end >= graceEnd) {
         return 'Blocked: item is late and not yet returned'
       }
       if (NEEDS_CLEANING.includes(status)) {
@@ -163,7 +184,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
     setLoading(true)
     supabase
       .from('items')
-      .select('id, shop_id, name, buffer_days, branches(name), bookings(id, customer_name, start_date, end_date, buffer_days, status)')
+      .select('id, shop_id, name, buffer_days, branches(name), bookings(id, customer_name, start_date, end_date, return_grace_days, buffer_days, status)')
       .lte('bookings.start_date', days[days.length - 1])
       .gte('bookings.end_date', addDays(days[0], -30)) // margin so late/cleaning days still show
       .order('name')
@@ -186,6 +207,14 @@ export default function CalendarPage({ branch }: { branch: string }) {
 
   async function addBooking(e: FormEvent) {
     e.preventDefault()
+    if (!isValidName(name)) {
+      setMsg({ ok: false, text: 'Customer name must contain letters and cannot contain numbers.' })
+      return
+    }
+    if (!isValidPhone(phone)) {
+      setMsg({ ok: false, text: 'Enter a phone number using 10 to 15 digits.' })
+      return
+    }
     const item = visible.find((i) => i.id === chosenId)
     if (!item) return
     setSaving(true)
@@ -195,20 +224,31 @@ export default function CalendarPage({ branch }: { branch: string }) {
     const endDate = addDays(startDate, nights - 1)
 
     // Block dates that overlap another booking or its cleaning days
-    const { data: clash, error: clashErr } = await supabase
+    const { data: bookings, error: clashErr } = await supabase
       .from('bookings')
-      .select('id')
+      .select('start_date, end_date, return_grace_days, buffer_days')
       .eq('item_id', item.id)
       .neq('status', 'cancelled')
-      .lte('start_date', addDays(endDate, buffer))
-      .gte('end_date', addDays(startDate, -buffer))
-      .limit(1)
+      .neq('status', 'canceled')
+      .neq('status', 'declined')
+
     if (clashErr) {
       setMsg({ ok: false, text: clashErr.message })
       setSaving(false)
       return
     }
-    if (clash && clash.length > 0) {
+    const requestedStart = addDays(startDate, -buffer)
+    const requestedEnd = addDays(endDate, DEFAULT_RETURN_GRACE_DAYS + buffer)
+    const clash = bookings?.some((booking) => {
+      const existingBuffer = booking.buffer_days ?? buffer
+      const existingStart = addDays(booking.start_date, -existingBuffer)
+      const existingEnd = addDays(
+        booking.end_date,
+        (booking.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + existingBuffer
+      )
+      return requestedStart <= existingEnd && existingStart <= requestedEnd
+    })
+    if (clash) {
       setMsg({ ok: false, text: 'Those dates are not available. Another booking or its cleaning days overlap.' })
       setSaving(false)
       return
@@ -225,7 +265,12 @@ export default function CalendarPage({ branch }: { branch: string }) {
       status: 'reserved',
     })
     if (insErr) {
-      setMsg({ ok: false, text: insErr.message })
+      setMsg({
+        ok: false,
+        text: insErr.message.includes('DATES_UNAVAILABLE')
+          ? 'Those dates are no longer available. Pick other dates.'
+          : insErr.message,
+      })
     } else {
       setMsg({ ok: true, text: `Booking added for ${name.trim()}.` })
       setName('')
@@ -314,7 +359,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
                   return hit ? (
                     <div
                       key={d}
-                      title={`${hit.b.customer_name ?? 'Customer'} · ${norm(hit.b.status).replace('_', ' ')}${hit.late ? ' · late' : ''}`}
+                      title={`${norm(hit.b.status).replace('_', ' ')}${hit.late ? ' · late' : ''}`}
                       onClick={() => {
                         setStartDate(d)
                         setMsg({ ok: false, text: blockedReason(item, d, today) || 'Those dates are not available.' })
@@ -400,7 +445,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
               placeholder="Full name"
               value={name}
               required
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value.replace(/[\p{N}\d]/gu, ''))}
             />
           </label>
 
@@ -408,10 +453,15 @@ export default function CalendarPage({ branch }: { branch: string }) {
             Phone number
             <input
               type="tel"
+              inputMode="numeric"
+              minLength={10}
+              maxLength={15}
+              pattern="[0-9]{10,15}"
+              required
               className={fieldCls}
-              placeholder="09xx xxx xxxx"
+              placeholder="Mobile number"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(digitsOnly(e.target.value))}
             />
           </label>
 

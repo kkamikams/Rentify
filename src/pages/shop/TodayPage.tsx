@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Booking, Shop } from '../../lib/shop'
-import { branchName, diffDays, fmt, inBranch, norm, peso, today } from '../../lib/shop'
+import { branchName, DEFAULT_RETURN_GRACE_DAYS, diffDays, fmt, inBranch, norm, peso, returnDeadline, today } from '../../lib/shop'
 import { btn, card, Tag } from '../../lib/ui'
 
 export default function TodayPage({ shop, branch }: { shop: Shop; branch: string }) {
@@ -8,21 +8,28 @@ export default function TodayPage({ shop, branch }: { shop: Shop; branch: string
   const now = today()
   const mine = shop.bookings.filter((b) => inBranch(branch, branchName(b)))
   const fee = (b: Booking) => b.items?.late_fee_per_day ?? 0
-  const late = (b: Booking) => diffDays(b.end_date, now)
+  const deadline = (b: Booking) => returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
+  const late = (b: Booking) => diffDays(deadline(b), now)
   const is = (b: Booking, s: string) => norm(b.status) === s
 
   const groups = [
     {
       title: 'Overdue', red: true,
-      list: mine.filter((b) => is(b, 'out') && b.end_date < now),
+      list: mine.filter((b) => is(b, 'out') && deadline(b) < now),
       line: (b: Booking) => `Late ${late(b)} day(s), fee so far ${peso(late(b) * fee(b))}`,
-      sms: (b: Booking) => `Reminder: ${b.items?.name} was due back ${fmt(b.end_date)}. Late fee is ${peso(fee(b))} per day.`,
+      sms: (b: Booking) => `Reminder: ${b.items?.name} was due back ${fmt(deadline(b))}. Late fee is ${peso(fee(b))} per day.`,
     },
     {
       title: 'Due back today', red: false,
-      list: mine.filter((b) => is(b, 'out') && b.end_date === now),
+      list: mine.filter((b) => is(b, 'out') && deadline(b) === now),
       line: () => 'Return Today',
       sms: (b: Booking) => `Reminder: please return ${b.items?.name} today.`,
+    },
+    {
+      title: 'Return grace period', red: false,
+      list: mine.filter((b) => is(b, 'out') && b.end_date < now && deadline(b) > now),
+      line: (b: Booking) => `Return by ${fmt(deadline(b))} · no late fee yet`,
+      sms: (b: Booking) => `Reminder: ${b.items?.name} is in its return grace period. Return by ${fmt(deadline(b))} to avoid late fees.`,
     },
     {
       title: 'Pickups today', red: false,

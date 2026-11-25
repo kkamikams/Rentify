@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { Navigation } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { isValidName, digitsOnly, isValidPhone } from '../../lib/name'
 
 type Meta = { full_name?: string; phone?: string; addresses?: string[] }
 type Tab = 'profile' | 'bookings'
@@ -50,6 +51,14 @@ export default function ProfilePage({ session, onSignOut }: { session: Session; 
 
   async function saveProfile(e: FormEvent) {
     e.preventDefault()
+    if (!isValidName(name)) {
+      setErr('Full name must contain letters and cannot contain numbers.')
+      return
+    }
+    if (!isValidPhone(phone)) {
+      setErr('Enter your mobile number using 10 to 15 digits.')
+      return
+    }
     if (await save({ full_name: name.trim(), phone: phone.trim() })) setEditing(false)
   }
   async function addAddress(e: FormEvent) {
@@ -78,11 +87,11 @@ export default function ProfilePage({ session, onSignOut }: { session: Session; 
         <form onSubmit={saveProfile} className="mb-3 grid gap-3 sm:grid-cols-2">
           <label className="text-sm text-ink/70">
             Full name
-            <input required className={`${field} mt-1`} value={name} onChange={(e) => setName(e.target.value)} />
+            <input required className={`${field} mt-1`} value={name} onChange={(e) => setName(e.target.value.replace(/[\p{N}\d]/gu, ''))} />
           </label>
           <label className="text-sm text-ink/70">
             Mobile number
-            <input type="tel" className={`${field} mt-1`} placeholder="09xx xxx xxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <input type="tel" inputMode="numeric" minLength={10} maxLength={15} pattern="[0-9]{10,15}" required className={`${field} mt-1`} placeholder="Mobile number" value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} />
           </label>
           <div className="flex gap-2">
             <button className={smallBtn} disabled={busy}>{busy ? 'Saving...' : 'Save'}</button>

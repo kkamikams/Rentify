@@ -13,7 +13,11 @@ export type CShop = { id: string; name: string; pay_number: string | null; pay_n
 export type MyBooking = {
   id: string; item_id: string; start_date: string; end_date: string; status: string | null
   customer_id: string
+  return_grace_days: number | null
   payment_ref: string | null; payment_method: string | null; deposit_amount: number | null
+  quoted_item_name: string | null; quoted_start_date: string | null; quoted_end_date: string | null
+  quoted_daily_rate: number | null; quoted_rental_total: number | null
+  quoted_deposit_amount: number | null; quoted_late_fee_per_day: number | null
   extension_requested: boolean; items: CItem | null
 }
 export type Msg = { id: string; branch_id: string; sender: string; body: string; created_at: string }

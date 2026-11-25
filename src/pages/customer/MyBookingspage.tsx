@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { MyBooking } from '../../lib/customer'
-import { addDays, diffDays, fmt, norm, peso, today } from '../../lib/shop'
+import { addDays, DEFAULT_RETURN_GRACE_DAYS, diffDays, fmt, norm, peso, returnDeadline, today } from '../../lib/shop'
+import { longDate } from '../../lib/customer'
 
 const btnDark = 'w-full rounded-sm bg-booked px-4 py-2 text-xs font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]'
+const pdfPeso = (amount: number) => `PHP ${Math.round(amount).toLocaleString('en-PH')}`
 const TAG: Record<string, [string, string]> = {
   pending: ['Awaiting confirmation', 'bg-reserved text-ink'],
   reserved: ['Confirmed', 'bg-green-700 text-white'],
@@ -15,6 +17,79 @@ const TAG: Record<string, [string, string]> = {
   cancelled: ['Cancelled', 'bg-cell text-ink'],
 }
 const btnGrey = 'w-full rounded-sm bg-cell px-4 py-2 text-xs font-semibold text-ink shadow-[0_2px_3px_rgba(0,0,0,0.2)] disabled:opacity-60'
+
+async function downloadReceiptPdf(booking: MyBooking) {
+  const { jsPDF } = await import('jspdf')
+  const item = booking.items
+  const start = booking.quoted_start_date ?? booking.start_date
+  const end = booking.quoted_end_date ?? booking.end_date
+  const graceDays = booking.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS
+  const rentalDays = diffDays(start, end) + 1
+  const dailyRate = booking.quoted_daily_rate ?? item?.price_per_day ?? 0
+  const rentalQuote = booking.quoted_rental_total ?? dailyRate * rentalDays
+  const deposit = booking.quoted_deposit_amount ?? booking.deposit_amount ?? item?.deposit ?? 0
+  const lateFee = booking.quoted_late_fee_per_day ?? item?.late_fee_per_day ?? 0
+  const pdf = new jsPDF()
+  let y = 24
+
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(20)
+  pdf.text('Rentify Digital Booking Receipt', 18, y)
+  y += 12
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(10)
+  pdf.text(`Booking reference: ${booking.id}`, 18, y)
+  y += 12
+
+  const detail = (label: string, value: string) => {
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(label, 18, y)
+    y += 6
+    pdf.setFont('helvetica', 'normal')
+    const lines = pdf.splitTextToSize(value, 174) as string[]
+    pdf.text(lines, 18, y)
+    y += lines.length * 5 + 5
+  }
+
+  detail('Item', booking.quoted_item_name ?? item?.name ?? 'Rental item')
+  if (item?.branches?.name) detail('Branch', item.branches.name)
+  detail('Pickup', longDate(start))
+  detail('Rental period ends', longDate(end))
+  detail('Return no later than', longDate(returnDeadline(end, graceDays)))
+  detail('Rental rate', `${pdfPeso(dailyRate)} x ${rentalDays} day(s)`)
+
+  pdf.setDrawColor(180)
+  pdf.line(18, y, 192, y)
+  y += 9
+  const amount = (label: string, value: number, bold = false) => {
+    pdf.setFont('helvetica', bold ? 'bold' : 'normal')
+    pdf.text(label, 18, y)
+    pdf.text(pdfPeso(value), 192, y, { align: 'right' })
+    y += 8
+  }
+  amount('Rental quote', rentalQuote)
+  amount('Security deposit', deposit)
+  amount('Total quoted', rentalQuote + deposit, true)
+  pdf.line(18, y, 192, y)
+  y += 10
+
+  detail('Late return', `${pdfPeso(lateFee)} per day after the return deadline.`)
+  detail('Missing pieces', 'Charges may be deducted from the security deposit.')
+  detail('Deposit amount recorded', `${pdfPeso(booking.deposit_amount ?? deposit)} via ${booking.payment_method || 'Not recorded'}.`)
+  if (booking.payment_ref) detail('Payment reference', booking.payment_ref)
+  pdf.setFontSize(9)
+  pdf.setTextColor(100)
+  pdf.text(
+    pdf.splitTextToSize(
+      'Keep this receipt as your record of the booking quote and terms. Payment references are subject to shop verification.',
+      174
+    ) as string[],
+    18,
+    y
+  )
+
+  pdf.save(`rentify-receipt-${booking.id}.pdf`)
+}
 
 export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: string) => void }) {
   const [list, setList] = useState<MyBooking[]>([])
@@ -69,11 +144,6 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
         return
       }
 
-      setList((current) =>
-        current.map((booking) =>
-          booking.id === confirmingCancelId ? { ...booking, status: 'cancelled' } : booking
-        )
-      )
       setConfirmingCancelId(null)
       setSuccess('Booking cancelled successfully.')
       await load()
@@ -95,12 +165,14 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
       {list.map((b) => {
         const st = norm(b.status)
         const x = b.items
-        const fee = x?.late_fee_per_day ?? 0
+        const deadline = returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
+        const fee = b.quoted_late_fee_per_day ?? x?.late_fee_per_day ?? 0
         const tag = TAG[st] ?? [st, 'bg-reserved text-ink']
         const when =
           st === 'out'
-            ? b.end_date < now ? `Late by ${diffDays(b.end_date, now)} day(s). Fee so far ${peso(diffDays(b.end_date, now) * fee)}.`
-              : b.end_date === now ? 'Return today.' : `${diffDays(now, b.end_date)} day(s) left.`
+            ? deadline < now ? `Late by ${diffDays(deadline, now)} day(s). Fee so far ${peso(diffDays(deadline, now) * fee)}.`
+              : b.end_date < now ? `Return grace period ends ${fmt(deadline)}. No late fee yet.`
+                : `Return by ${fmt(deadline)}.`
             : st === 'pending' || st === 'reserved'
               ? b.start_date <= now ? 'Pickup today.' : `Pickup in ${diffDays(now, b.start_date)} day(s).`
               : ''
@@ -114,20 +186,33 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
                 {x?.name}
                 <span className={`rounded-sm px-1.5 py-0.5 text-[9px] font-semibold ${tag[1]}`}>{tag[0]}</span>
               </div>
-              <p className="text-ink/60">Pickup {fmt(b.start_date)} · Return by <b className="text-ink">{fmt(b.end_date)}</b></p>
+              <p className="text-ink/60">Pickup {fmt(b.start_date)} · Rental ends {fmt(b.end_date)} · Return by <b className="text-ink">{fmt(deadline)}</b></p>
               {when && <p>{when}</p>}
               <p className="text-ink/60">Branch: {x?.branches?.name}</p>
               {st === 'pending' && <p className="font-bold">Waiting for the shop to confirm.</p>}
-              {b.extension_requested && <p className="font-bold">Extension requested until {fmt(addDays(b.end_date, 1))}. Waiting for the shop.</p>}
+              {b.extension_requested && <p className="font-bold">Extension requested; new return deadline would be {fmt(returnDeadline(addDays(b.end_date, 1), b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}. Waiting for the shop.</p>}
               {b.payment_ref && (
                 <p className="font-bold">Deposit {peso(b.deposit_amount ?? 0)} paid online via {b.payment_method} (ref {b.payment_ref})</p>
               )}
               <p className="text-ink/50">
-                {x?.inclusions ? `Pieces: ${x.inclusions} · ` : ''}Deposit {peso(x?.deposit ?? 0)} · Late fee {peso(fee)}/day
+                {x?.inclusions ? `Pieces: ${x.inclusions} · ` : ''}Deposit {peso(b.quoted_deposit_amount ?? x?.deposit ?? 0)} · Late fee after ${fmt(deadline)}: {peso(fee)}/day
               </p>
             </div>
             <div className="w-44 space-y-2">
               <button className={btnDark} onClick={() => onMessage(x?.branch_id ?? undefined)}>Message {x?.branches?.name}</button>
+              <button
+                className={btnGrey}
+                onClick={async () => {
+                  try {
+                    await downloadReceiptPdf(b)
+                    setErr('')
+                  } catch (error) {
+                    setErr(error instanceof Error ? error.message : 'Could not create receipt PDF.')
+                  }
+                }}
+              >
+                Save receipt as PDF
+              </button>
               {(st === 'pending' || st === 'reserved') && (
                 <button className={btnGrey} onClick={() => { setErr(''); setSuccess(''); setConfirmingCancelId(b.id) }}>
                   Cancel booking

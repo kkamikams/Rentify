@@ -5,6 +5,7 @@ import { ArrowLeft, MessageCircle, ShoppingBag, User } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { peso } from '../lib/shop'
 import { Tag } from '../lib/ui'
+import { isValidName, digitsOnly, isValidPhone } from '../lib/name'
 import { useCatalog } from '../lib/customer'
 import type { CItem } from '../lib/customer'
 import ItemPage, { SentPage } from './customer/ItemPage'
@@ -34,6 +35,14 @@ function CustomerProfileSetup({ user }: { user: Session['user'] }) {
 
   async function save(e: FormEvent) {
     e.preventDefault()
+    if (!isValidName(name)) {
+      setError('Full name must contain letters and cannot contain numbers.')
+      return
+    }
+    if (!isValidPhone(phone)) {
+      setError('Enter your mobile number using 10 to 15 digits.')
+      return
+    }
     setBusy(true)
     setError('')
     const updatedAddresses = address.trim()
@@ -69,13 +78,13 @@ function CustomerProfileSetup({ user }: { user: Session['user'] }) {
           <label className="block text-sm text-ink/70">
             Full name
             <input autoFocus required className="mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm"
-              value={name} onChange={(e) => setName(e.target.value)} />
+              value={name} onChange={(e) => setName(e.target.value.replace(/[\p{N}\d]/gu, ''))} />
           </label>
           <label className="block text-sm text-ink/70">
             Mobile number
-            <input required type="tel" placeholder="09xx xxx xxxx"
+            <input required type="tel" inputMode="numeric" minLength={10} maxLength={15} pattern="[0-9]{10,15}" placeholder="Mobile number"
               className="mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm"
-              value={phone} onChange={(e) => setPhone(e.target.value)} />
+              value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} />
           </label>
           <label className="block text-sm text-ink/70">
             Primary pickup address <span className="text-ink/50">(optional)</span>

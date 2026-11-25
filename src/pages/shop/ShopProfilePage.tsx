@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient'
 import type { Shop } from '../../lib/shop'
 import { norm } from '../../lib/shop'
 import { card } from '../../lib/ui'
+import { isValidName, digitsOnly, isValidPhone } from '../../lib/name'
 
 type Meta = { full_name?: string; phone?: string }
 type Payment = { number: string; name: string }
@@ -81,6 +82,14 @@ export default function ShopProfilePage({
 
   async function saveOwner(e: FormEvent) {
     e.preventDefault()
+    if (!isValidName(name)) {
+      setError('Owner name must contain letters and cannot contain numbers.')
+      return
+    }
+    if (!isValidPhone(phone)) {
+      setError('Enter your mobile number using 10 to 15 digits.')
+      return
+    }
     setBusy(true)
     setError('')
     const { data, error: saveError } = await supabase.auth.updateUser({
@@ -96,6 +105,10 @@ export default function ShopProfilePage({
     e.preventDefault()
     if (!shop.shopId) {
       setError('Shop details are still loading. Please try again.')
+      return
+    }
+    if (payment.number.trim() && !/^\d{6,20}$/.test(digitsOnly(payment.number))) {
+      setError('Enter a valid GCash or bank account number using digits only.')
       return
     }
     setBusy(true)
@@ -210,8 +223,8 @@ export default function ShopProfilePage({
           <form onSubmit={savePayment} className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm text-ink/70">
               GCash or bank account number
-              <input className={`${field} mt-1`} placeholder="09xx xxx xxxx" value={payment.number}
-                onChange={(e) => setPayment({ ...payment, number: e.target.value })} />
+              <input type="tel" inputMode="numeric" minLength={6} maxLength={20} pattern="[0-9]{6,20}" className={`${field} mt-1`} placeholder="Account number" value={payment.number}
+                onChange={(e) => setPayment({ ...payment, number: digitsOnly(e.target.value) })} />
             </label>
             <label className="text-sm text-ink/70">
               Account holder name
@@ -253,12 +266,12 @@ export default function ShopProfilePage({
           <form onSubmit={saveOwner} className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm text-ink/70">
               Owner name
-              <input required className={`${field} mt-1`} value={name} onChange={(e) => setName(e.target.value)} />
+              <input required className={`${field} mt-1`} value={name} onChange={(e) => setName(e.target.value.replace(/[\p{N}\d]/gu, ''))} />
             </label>
             <label className="text-sm text-ink/70">
               Mobile number
-              <input type="tel" className={`${field} mt-1`} placeholder="09xx xxx xxxx" value={phone}
-                onChange={(e) => setPhone(e.target.value)} />
+              <input type="tel" inputMode="numeric" minLength={10} maxLength={15} pattern="[0-9]{10,15}" required className={`${field} mt-1`} placeholder="Mobile number" value={phone}
+                onChange={(e) => setPhone(digitsOnly(e.target.value))} />
             </label>
             <div className="flex gap-2 sm:col-span-2">
               <button className={button} disabled={busy}>{busy ? 'Saving…' : 'Save contact'}</button>

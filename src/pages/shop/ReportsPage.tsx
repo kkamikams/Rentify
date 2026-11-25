@@ -1,11 +1,11 @@
 import type { Shop } from '../../lib/shop'
-import { branchName, inBranch, isCancelled, norm, peso, today } from '../../lib/shop'
+import { branchName, DEFAULT_RETURN_GRACE_DAYS, inBranch, isCancelled, norm, peso, returnDeadline, today } from '../../lib/shop'
 import { card, Stat, td, th } from '../../lib/ui'
 
 export default function ReportsPage({ shop, branch }: { shop: Shop; branch: string }) {
   const mine = shop.bookings.filter((b) => inBranch(branch, branchName(b)))
   const real = mine.filter((b) => !isCancelled(b))
-  const overdue = mine.filter((b) => norm(b.status) === 'out' && b.end_date < today()).length
+  const overdue = mine.filter((b) => norm(b.status) === 'out' && returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) < today()).length
   const pending = mine.filter((b) => norm(b.status) === 'pending').length
   const fees = mine.reduce((s, b) => s + (b.late_fee ?? 0), 0)
 
