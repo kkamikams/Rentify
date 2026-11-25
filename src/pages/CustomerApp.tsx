@@ -138,7 +138,9 @@ function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOp
   )
 }
 
-export default function CustomerApp({ name, onSignOut }: { name?: string; onSignOut: () => void }) {
+export default function CustomerApp({
+  name, onSignOut, guest = false, onNeedAuth,
+}: { name?: string; onSignOut: () => void; guest?: boolean; onNeedAuth?: () => void }) {
   const cat = useCatalog()
   const [session, setSession] = useState<Session | null>(null)
   const [view, setView] = useState<View>('home')
@@ -187,7 +189,11 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
     (p) => (category === 'All' || p.category === category) && p.name.toLowerCase().includes(q.toLowerCase())
   )
 
-  const go = (v: View, c = 'All') => { setView(v); setCategory(c); window.scrollTo(0, 0) }
+  const go = (v: View, c = 'All') => {
+    // Visitors who aren't logged in are sent to the log in page for account pages
+    if (guest && (v === 'profile' || v === 'bookings' || v === 'messages')) { onNeedAuth?.(); return }
+    setView(v); setCategory(c); window.scrollTo(0, 0)
+  }
   const open = (p: Product) => {
     const r = p.rows.find((x) => x.branches?.name === active) ?? p.rows[0]
     setItemId(r.id)
@@ -325,7 +331,7 @@ export default function CustomerApp({ name, onSignOut }: { name?: string; onSign
           shop={cat.shops.find((s) => s.id === item.shop_id)}
           session={session}
           onBack={() => go('catalog')}
-          onNeedAuth={() => {}}
+          onNeedAuth={() => onNeedAuth?.()}
           onSent={(start, end) => { setSent({ start, end }); setView('sent'); window.scrollTo(0, 0) }}
         />
       )}
