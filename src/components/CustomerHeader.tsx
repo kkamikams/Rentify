@@ -15,7 +15,7 @@ export default function CustomerHeader({
   onBookings: () => void
 }) {
   return (
-    <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
+    <header className="sticky top-[32px] z-40 bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
       <div className="mx-auto flex max-w-10xl items-center px-6 py-4">
       <button onClick={onHome} aria-label="Rentify home" className="text-2xl font-semibold">
         Rentify.

@@ -198,7 +198,7 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
                 {x?.inclusions ? `Pieces: ${x.inclusions} · ` : ''}Deposit {peso(b.quoted_deposit_amount ?? x?.deposit ?? 0)} · Late fee after ${fmt(deadline)}: {peso(fee)}/day
               </p>
             </div>
-            <div className="w-44 space-y-2">
+            <div className="w-44 space-y-2">  
               <button className={btnDark} onClick={() => onMessage(x?.branch_id ?? undefined)}>Message {x?.branches?.name}</button>
               <button
                 className={btnGrey}

@@ -35,7 +35,15 @@ export default function ProfilePage({ session, onSignOut }: { session: Session; 
   const [name, setName] = useState(meta.full_name ?? '')
   const [phone, setPhone] = useState(meta.phone ?? '')
   const [adding, setAdding] = useState(false)
-  const [addr, setAddr] = useState('')
+  const [firstName, setFirstName] = useState(meta.full_name?.split(' ')[0] ?? '')
+  const [lastName, setLastName] = useState(meta.full_name?.split(' ').slice(1).join(' ') ?? '')
+  const [address, setAddress] = useState('')
+  const [apartment, setApartment] = useState('')
+  const [barangay, setBarangay] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [city, setCity] = useState('')
+  const [region, setRegion] = useState('')
+  const [isDefault, setIsDefault] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -61,10 +69,35 @@ export default function ProfilePage({ session, onSignOut }: { session: Session; 
     }
     if (await save({ full_name: name.trim(), phone: phone.trim() })) setEditing(false)
   }
+  function closeAddressModal() {
+    setAdding(false)
+    setAddress('')
+    setApartment('')
+    setBarangay('')
+    setPostalCode('')
+    setCity('')
+    setRegion('')
+    setIsDefault(false)
+  }
+
   async function addAddress(e: FormEvent) {
     e.preventDefault()
-    if (!addr.trim()) return
-    if (await save({ addresses: [...addresses, addr.trim()] })) { setAddr(''); setAdding(false) }
+    if (!address.trim() || !barangay.trim() || !city.trim()) return
+
+    const formattedAddress = [
+      apartment.trim(),
+      address.trim(),
+      barangay.trim(),
+      city.trim(),
+      region.trim(),
+      postalCode.trim(),
+    ].filter(Boolean).join(', ')
+
+    const nextAddresses = isDefault
+      ? [formattedAddress, ...addresses]
+      : [...addresses, formattedAddress]
+
+    if (await save({ addresses: nextAddresses })) closeAddressModal()
   }
 
   async function setPrimaryAddress(index: number) {
@@ -122,11 +155,42 @@ export default function ProfilePage({ session, onSignOut }: { session: Session; 
       </div>
 
       {adding && (
-        <form onSubmit={addAddress} className="mb-3 flex flex-wrap gap-2">
-          <input required autoFocus className={`${field} min-w-[220px] flex-1`} placeholder="Street, barangay, city" value={addr} onChange={(e) => setAddr(e.target.value)} />
-          <button className={smallBtn} disabled={busy}>Save</button>
-          <button type="button" className={smallBtn} onClick={() => { setAdding(false); setAddr('') }}>Cancel</button>
-        </form>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) closeAddressModal() }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="add-address-title" className="w-full max-w-md rounded-sm bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id="add-address-title" className="text-lg font-bold">Add address</h2>
+              <button type="button" aria-label="Close" className="text-2xl leading-none text-ink/70" onClick={closeAddressModal}>×</button>
+            </div>
+
+            <form onSubmit={addAddress} className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 rounded-sm border border-ink/20 px-3 py-2 text-sm">
+                <span className="block text-[10px] text-ink/60">Country/region</span>
+                <span>Philippines</span>
+              </div>
+
+              <input required aria-label="First name" placeholder="First name" className={field} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <input required aria-label="Last name" placeholder="Last name" className={field} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+
+              <input required aria-label="Address" placeholder="Address" className={`${field} col-span-2`} value={address} onChange={(e) => setAddress(e.target.value)} />
+              <input aria-label="Apartment, suite, etc." placeholder="Apartment, suite, etc." className={field} value={apartment} onChange={(e) => setApartment(e.target.value)} />
+              <input required aria-label="Barangay" placeholder="Barangay" className={field} value={barangay} onChange={(e) => setBarangay(e.target.value)} />
+              <input aria-label="Postal code" placeholder="Postal code" className={field} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+              <input required aria-label="City" placeholder="City" className={field} value={city} onChange={(e) => setCity(e.target.value)} />
+
+              <input aria-label="Region" placeholder="Region" className={`${field} col-span-2`} value={region} onChange={(e) => setRegion(e.target.value)} />
+
+              <label className="col-span-2 flex items-center gap-2 text-xs text-ink/70">
+                <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
+                This is my default address
+              </label>
+
+              <div className="col-span-2 mt-2 flex justify-end gap-3">
+                <button type="button" className="text-sm underline" onClick={closeAddressModal}>Cancel</button>
+                <button type="submit" disabled={busy} className="rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Save</button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
 
       <div className="rounded-sm border border-ink/20">
@@ -156,7 +220,7 @@ export default function ProfilePage({ session, onSignOut }: { session: Session; 
       {err && <p role="alert" className="mt-4 text-sm text-cleaning">{err}</p>}
       <div className="mt-8 text-center">
         <button onClick={onSignOut}
-          className="rounded-sm bg-ink px-4 py-2 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
+          className="rounded-sm bg-[#45352F] px-5 py-2.5 text-sm font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
           Log out
         </button>
       </div>

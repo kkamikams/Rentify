@@ -6,6 +6,7 @@ export type Item = {
   branch_id: string | null; price_per_day: number | null; deposit: number | null
   late_fee_per_day: number | null; buffer_days: number | null; inclusions: string | null
   branches: { name: string } | null
+  image_url?: string | null; image_urls?: string[] | null
 }
 export type Booking = {
   id: string; shop_id: string; item_id: string

@@ -5,7 +5,7 @@ export type CItem = {
   id: string; shop_id: string; name: string; category: string | null
   branch_id: string | null; price_per_day: number | null; deposit: number | null
   late_fee_per_day: number | null; buffer_days: number | null; inclusions: string | null
-  image_url: string | null; created_at: string | null
+  image_url: string | null; image_urls?: string[] | null; created_at: string | null
   branches: { name: string } | null
 }
 export type CBranch = { id: string; shop_id: string; name: string }
@@ -29,6 +29,13 @@ export const STATUS_LABEL: Record<string, string> = {
   pending: 'Awaiting confirmation', reserved: 'Reserved', out: 'Picked up', in_transit: 'Returned',
   returned: 'Returned', cleaning: 'Returned', ready: 'Returned', cancelled: 'Cancelled', canceled: 'Cancelled',
 }
+export const itemImages = (item: CItem) => {
+  const extra = item.image_urls ?? []
+  return [...new Set(extra.length ? extra : (item.image_url ? [item.image_url] : []))]
+    .filter((url): url is string => !!url)
+    .slice(0, 4)
+}
+
 export const longDate = (s: string) => {
   const [y, m, d] = s.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('en-PH', { month: 'long', day: 'numeric' })

@@ -8,6 +8,7 @@ import { Tag } from '../lib/ui'
 import { isValidName, digitsOnly, isValidPhone } from '../lib/name'
 import { useCatalog } from '../lib/customer'
 import type { CItem } from '../lib/customer'
+import { itemImages } from '../lib/customer'
 import CustomerHeader from '../components/CustomerHeader'
 import ItemPage, { SentPage } from './customer/ItemPage'
 import MyBookingsPage from './customer/MyBookingspage'
@@ -124,14 +125,16 @@ const Instagram = () => (
 )
 
 function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOpen: () => void }) {
-  const img = p.rows.find((r) => r.image_url)?.image_url
+  const [hovered, setHovered] = useState(false)
+  const images = itemImages(p.rows[0])
+  const img = hovered && images.length > 1 ? images[1] : (images[0] ?? null)
   return (
-    <button onClick={onOpen} className="text-left">
-      <div className="aspect-[3/4] w-full overflow-hidden bg-white">
+    <button onClick={onOpen} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} className="h-[445px] w-full text-left">
+      <div className="h-96 w-full overflow-hidden bg-white">
         {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
       </div>
-      <p className="mt-2 text-[13px]">{p.name}</p>
-      <p className="text-[11px]"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
+      <p className="mt-2 h-5 text-[13px] leading-5">{p.name}</p>
+      <p className="h-5 text-[11px]"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
       {showBranch && (
         <div className="mt-1 flex flex-wrap gap-1">{p.branches.map((b) => <Tag key={b}>{b}</Tag>)}</div>
       )}
@@ -207,7 +210,7 @@ export default function CustomerApp({
   return (
     <div className="min-h-screen bg-cream">
       {!account && (
-        <div className="bg-ink py-2 text-center text-[11px] font-medium tracking-wide text-cream">
+        <div className="sticky top-0 z-50 bg-ink py-2 text-center text-[11px] font-medium tracking-wide text-cream">
           {view === 'home' ? 'YOUR NEXT OCCASION, YOUR PERFECT OUTFIT.' : 'FIND YOUR FIT'}
         </div>
       )}
@@ -261,8 +264,12 @@ export default function CustomerApp({
             </div>
 
             <h2 className="mb-6 mt-10 inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">NEW ARRIVALS</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-6">
-              {products.slice(0, 6).map((p) => <Card key={p.name} p={p} showBranch={multi} onOpen={() => open(p)} />)}
+            <div className="flex gap-5 overflow-x-auto pb-4">
+              {products.map((p) => (
+                <div key={p.name} className="w-72 shrink-0">
+                  <Card p={p} showBranch={multi} onOpen={() => open(p)} />
+                </div>
+              ))}
             </div>
             {products.length === 0 && !cat.error && <p className="text-sm text-ink/60">No items yet.</p>}
           </section>

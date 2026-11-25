@@ -40,7 +40,7 @@ const pathFromUrl = (url: string | null) => {
 
 export default function InventoryPage({ shop, branch }: { shop: Shop; branch: string }) {
   const [f, setF] = useState({ name: '', category: CATEGORIES[0], branch_id: '', price: '', deposit: '', inclusions: '', sizes: '' })
-  const [image, setImage] = useState<File | null>(null)
+  const [images, setImages] = useState<File[]>([])
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState('')
   const [photoBusy, setPhotoBusy] = useState('') // id of the item whose photo is uploading
@@ -49,9 +49,8 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
   const save = (id: string, patch: object) => shop.act(supabase.from('items').update(patch).eq('id', id))
   const set = (k: string, v: string) => setF({ ...f, [k]: v })
 
-  // Preview of the photo chosen in the add form
-  const preview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image])
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
+  const previews = useMemo(() => images.map((file) => URL.createObjectURL(file)), [images])
+  useEffect(() => () => { previews.forEach((url) => URL.revokeObjectURL(url)) }, [previews])
 
   // Change (or first-time add) the photo of an existing item
   async function changePhoto(item: Item, file: File | undefined) {
@@ -63,7 +62,12 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
     let uploaded: { path: string; url: string } | null = null
     try {
       uploaded = await uploadImage(shop.shopId, file)
-      const { error } = await supabase.from('items').update({ image_url: uploaded.url }).eq('id', item.id)
+      const existing = ((item as Item & { image_urls?: string[] | null }).image_urls?.length
+        ? (item as Item & { image_urls?: string[] | null }).image_urls
+        : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
+      if (existing.length >= 4) throw new Error('An item can have up to 4 photos.')
+      const next = [...existing, uploaded.url].slice(0, 4)
+      const { error } = await supabase.from('items').update({ image_url: next[0], image_urls: next }).eq('id', item.id)
       if (error) throw new Error(error.message)
 
       // Best effort: delete the old photo so storage doesn't fill up
@@ -84,7 +88,11 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
     if (!window.confirm(`Remove the photo of ${item.name}?`)) return
     setPhotoBusy(item.id)
     setPhotoError('')
-    const { error } = await supabase.from('items').update({ image_url: null }).eq('id', item.id)
+    const existing = ((item as Item & { image_urls?: string[] | null }).image_urls?.length
+      ? (item as Item & { image_urls?: string[] | null }).image_urls
+      : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
+    const next = existing.slice(1)
+    const { error } = await supabase.from('items').update({ image_url: next[0] ?? null, image_urls: next }).eq('id', item.id)
     if (error) setPhotoError(error.message)
     else {
       const oldPath = pathFromUrl(imageOf(item))
@@ -101,7 +109,12 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
     let imagePath: string | null = null
     try {
       let imageUrl: string | null = null
-      if (image) {
+      const uploadedGallery: string[] = []
+      if (images.length > 4) {
+        setAddError('Choose no more than 4 photos.')
+        return
+      }
+      for (const image of images) {
         const problem = checkImage(image)
         if (problem) {
           setAddError(problem)
@@ -109,13 +122,14 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
         }
         try {
           const up = await uploadImage(shop.shopId, image)
-          imagePath = up.path
-          imageUrl = up.url
+          uploadedGallery.push(up.url)
+          if (!imagePath) imagePath = up.path
         } catch (err) {
           setAddError(err instanceof Error ? err.message : 'Upload failed.')
           return
         }
       }
+      imageUrl = uploadedGallery[0] ?? null
 
       const rule = shop.rules.find((r) => r.category === f.category)
       const { error: insertError } = await supabase.from('items').insert({
@@ -124,7 +138,8 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
         deposit: Number(f.deposit) || rule?.deposit || 0,
         late_fee_per_day: rule?.late_fee_per_day ?? 0,
         inclusions: f.inclusions.trim() || null,
-        size_info: f.sizes.trim() || null, buffer_days: rule?.buffer_days ?? 2, image_url: imageUrl,
+        size_info: f.sizes.trim() || null, buffer_days: rule?.buffer_days ?? 2,
+        image_url: imageUrl, image_urls: uploadedGallery,
       })
       if (insertError) {
         if (imagePath) {
@@ -139,7 +154,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
 
       await shop.reload()
       setF({ ...f, name: '', price: '', deposit: '', inclusions: '', sizes: '' })
-      setImage(null)
+      setImages([])
     } catch (error) {
       setAddError(error instanceof Error ? error.message : 'Unable to add item.')
     } finally {
@@ -235,19 +250,24 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
             placeholder={'Sizes (one per line), e.g.\nBust: 93 cm / 37 in\nWaist: 73 cm / 29 in'}
             value={f.sizes} onChange={(e) => set('sizes', e.target.value)} />
           <div className="col-span-2 flex items-center gap-4 sm:col-span-4">
-            <div className="h-48 w-36 shrink-0 overflow-hidden bg-cell">
-              {preview && <img src={preview} alt="Preview" className="h-full w-full object-cover" />}
+            <div className="flex h-48 gap-2 overflow-x-auto">
+              {previews.map((preview) => (
+                <div key={preview} className="h-48 w-36 shrink-0 overflow-hidden bg-cell">
+                  <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+                </div>
+              ))}
             </div>
             <label className="text-sm">
-              Item photo (optional, max {MAX_MB} MB)
+              Item photos (optional, 1-4 photos, max {MAX_MB} MB each)
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 className="mt-1 block w-full text-sm"
-                onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+                onChange={(e) => setImages(Array.from(e.target.files ?? []).slice(0, 4))}
               />
-              {image && (
-                <button type="button" className="mt-1 text-sm underline" onClick={() => setImage(null)}>Clear photo</button>
+              {images.length > 0 && (
+                <button type="button" className="mt-1 text-sm underline" onClick={() => setImages([])}>Clear photos</button>
               )}
             </label>
           </div>

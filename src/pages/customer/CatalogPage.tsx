@@ -1,13 +1,17 @@
 import { useState } from 'react'
+import { itemImages } from '../../lib/customer'
 import type { CItem } from '../../lib/customer'
 import { CATEGORY_TABS } from '../../lib/customer'
 import { peso } from '../../lib/shop'
 
 export function ItemCard({ item, onOpen, showBranch = false }: { item: CItem; onOpen: () => void; showBranch?: boolean }) {
+  const [hovered, setHovered] = useState(false)
+  const images = itemImages(item)
+  const image = hovered && images.length > 1 ? images[1] : (images[0] ?? null)
   return (
-    <button onClick={onOpen} className="text-left">
+    <button onClick={onOpen} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} className="text-left">
       <div className="mb-2 aspect-[3/4] w-full overflow-hidden bg-white shadow-sm">
-        {item.image_url && <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />}
+        {image && <img src={image} alt={item.name} className="h-full w-full object-cover transition-opacity duration-200" />}
       </div>
       <div className="text-sm">{item.name}</div>
       <div className="text-sm">

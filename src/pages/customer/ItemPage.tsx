@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import type { CBranch, CItem, CShop } from '../../lib/customer'
-import { longDate } from '../../lib/customer'
+import { itemImages, longDate } from '../../lib/customer'
 import { addDays, DEFAULT_RETURN_GRACE_DAYS, peso, returnDeadline, today } from '../../lib/shop'
 import { digitsOnly, isValidPhone } from '../../lib/name'
 
@@ -26,6 +26,8 @@ export default function ItemPage({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [blockReason, setBlockReason] = useState('')
+  const images = itemImages(item)
+  const [photoIndex, setPhotoIndex] = useState(0)
 
   const end = addDays(start, days - 1)
   const price = item.price_per_day ?? 0
@@ -119,11 +121,28 @@ export default function ItemPage({
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-6">
+    <div className="mx-auto max-w-6xl px-2 py-6">
       <button onClick={onBack} className="mb-6 flex items-center gap-1 text-sm"><ChevronLeft size={16} /> Back</button>
-      <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
-        <div className="aspect-[3/4] bg-white shadow-sm">
-          {item.image_url && <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />}
+      <div className="grid gap-6 md:grid-cols-[1.15fr_1.85fr]">
+        <div>
+          <div className="relative aspect-[3/4] overflow-hidden bg-white shadow-sm">
+            {images[photoIndex] && <img src={images[photoIndex]} alt={`${item.name} photo ${photoIndex + 1}`} className="h-full w-full object-contain" />}
+            {images.length > 1 && (
+              <>
+                <button type="button" aria-label="Previous photo" onClick={() => setPhotoIndex((photoIndex - 1 + images.length) % images.length)} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronLeft size={18} /></button>
+                <button type="button" aria-label="Next photo" onClick={() => setPhotoIndex((photoIndex + 1) % images.length)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronRight size={18} /></button>
+              </>
+            )}
+          </div>
+          {images.length > 1 && (
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              {images.map((image, index) => (
+                <button key={image} type="button" onClick={() => setPhotoIndex(index)} className={`aspect-square overflow-hidden border-2 ${photoIndex === index ? 'border-ink' : 'border-transparent'}`}>
+                  <img src={image} alt="" className="h-full w-full object-contain" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="rounded-sm bg-white p-6 text-sm shadow-sm">
           <div className="flex items-start justify-between gap-4">
