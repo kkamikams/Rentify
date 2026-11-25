@@ -62,8 +62,8 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
       ? (item as Item & { image_urls?: string[] | null }).image_urls
       : (imageOf(item) ? [imageOf(item)!] : [])) ?? []
 
-    if (existing.length + files.length > 4) {
-      setPhotoError(`This item already has ${existing.length} photo${existing.length === 1 ? '' : 's'}. A maximum of 4 photos is allowed.`)
+    if (existing.length + files.length > 2) {
+      setPhotoError(`This item already has ${existing.length} photo${existing.length === 1 ? '' : 's'}. A maximum of 2 photos is allowed.`)
       setPhotoBusy('')
       return
     }
@@ -76,7 +76,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
         uploaded.push(await uploadImage(shop.shopId, file))
       }
 
-      const next = [...existing, ...uploaded.map((photo) => photo.url)].slice(0, 4)
+      const next = [...existing, ...uploaded.map((photo) => photo.url)].slice(0, 2)
       let { error } = await supabase.from('items').update({ image_url: next[0], image_urls: next }).eq('id', item.id)
       if (error?.message.includes('image_urls')) {
         const fallback = await supabase.from('items').update({ image_url: next[0] }).eq('id', item.id)
@@ -125,8 +125,8 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
     try {
       let imageUrl: string | null = null
       const uploadedGallery: string[] = []
-      if (images.length > 4) {
-        setAddError('Choose no more than 4 photos.')
+      if (images.length > 2) {
+        setAddError('Choose no more than 2 photos.')
         return
       }
       for (const image of images) {
@@ -220,7 +220,7 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
                             multiple
                             className="hidden"
                             disabled={busy}
-                            onChange={(e) => { changePhotos(i, Array.from(e.target.files ?? []).slice(0, 4)); e.target.value = '' }}
+                            onChange={(e) => { changePhotos(i, Array.from(e.target.files ?? []).slice(0, 2)); e.target.value = '' }}
                           />
                         </label>
                         {img && !busy && (
@@ -288,13 +288,13 @@ export default function InventoryPage({ shop, branch }: { shop: Shop; branch: st
               ))}
             </div>
             <label className="text-sm">
-              Item photos (optional, 1-4 photos, max {MAX_MB} MB each)
+              Item photos (optional, 1-2 photos, max {MAX_MB} MB each)
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 className="mt-1 block w-full text-sm"
-                onChange={(e) => setImages(Array.from(e.target.files ?? []).slice(0, 4))}
+                onChange={(e) => setImages(Array.from(e.target.files ?? []).slice(0, 2))}
               />
               {images.length > 0 && (
                 <button type="button" className="mt-1 text-sm underline" onClick={() => setImages([])}>Clear photos</button>

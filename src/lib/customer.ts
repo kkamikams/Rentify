@@ -33,7 +33,7 @@ export const itemImages = (item: CItem) => {
   const extra = item.image_urls ?? []
   return [...new Set([...(item.image_url ? [item.image_url] : []), ...extra])]
     .filter((url): url is string => !!url)
-    .slice(0, 4)
+    .slice(0, 2)
 }
 
 export const longDate = (s: string) => {
