@@ -12,7 +12,7 @@ import CustomerHeader from '../components/CustomerHeader'
 import ItemPage, { SentPage } from './customer/ItemPage'
 import MyBookingsPage from './customer/MyBookingspage'
 import MessagesPage from './customer/MessagesPage'
-import ProfilePage from './customer/ProfilePage'
+import ProfilePage, { AccountLayout } from './customer/ProfilePage'
 
 type Product = { name: string; category: string | null; price: number; deposit: number; branches: string[]; rows: CItem[] }
 type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages' | 'profile'
@@ -130,7 +130,7 @@ function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOp
       <div className="aspect-[3/4] w-full overflow-hidden bg-white">
         {img && <img src={img} alt={p.name} className="h-full w-full object-cover" />}
       </div>
-      <p className="mt-2 text-[11px]">{p.name}</p>
+      <p className="mt-2 text-[13px]">{p.name}</p>
       <p className="text-[11px]"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
       {showBranch && (
         <div className="mt-1 flex flex-wrap gap-1">{p.branches.map((b) => <Tag key={b}>{b}</Tag>)}</div>
@@ -206,9 +206,7 @@ export default function CustomerApp({
 
   return (
     <div className="min-h-screen bg-cream">
-      {account ? (
-        <div className="h-1.5 bg-ink" />
-      ) : (
+      {!account && (
         <div className="bg-ink py-2 text-center text-[11px] font-medium tracking-wide text-cream">
           {view === 'home' ? 'YOUR NEXT OCCASION, YOUR PERFECT OUTFIT.' : 'FIND YOUR FIT'}
         </div>
@@ -229,28 +227,33 @@ export default function CustomerApp({
 
       {session && <CustomerProfileSetup key={session.user.id} user={session.user} />}
 
-      {cat.error && <p className="px-6 pt-4 text-sm text-cleaning">{cat.error}</p>}
+      {cat.error && <p className="px-3 pt-4 text-sm text-cleaning">{cat.error}</p>}
 
       {view === 'home' && (
         <>
           <section className="bg-reserved">
-            <div className="mx-auto max-w-10xl px-6 py-16">
-              <h1 className="text-3xl font-bold leading-snug">
-                Dress for the moment,<br />Rent it with <span className="font-light italic">Rentify.</span>
-              </h1>
+            <div className="mx-auto max-w-10xl px-12 py-16">
+            <h1 className="text-4xl font-bold leading-snug" style={{ fontFamily: "'Dela Gothic One', sans-serif" }}>
+                Dress for the moment,<br /> Rent it with{' '}
+              <span
+                className="text-7xl font-normal"
+                style={{ fontFamily: "'Waterfall', cursive" }}>
+                Rentify.
+              </span>
+            </h1>
               <p className="mb-6 mt-3 text-xs">Find your perfect outfit for every occasion.</p>
-              <button onClick={() => go('catalog')} className="rounded-sm bg-ink px-5 py-2.5 text-sm font-semibold text-cream shadow">
+              <button onClick={() => go('catalog')} className="rounded-sm bg-[#45352F] px-5 py-2.5 text-sm font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
                 Browse Rentals →
               </button>
             </div>
           </section>
 
-          <section className="mx-auto max-w-6xl px-6 py-10">
+          <section className="px-10 py-10">
             <h2 className="mb-6 inline-block border-b-2 border-ink pb-1 text-sm font-medium tracking-wide">RENT BY CATEGORY</h2>
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-7 sm:grid-cols-4">
               {CATS.map((c) => (
-                <div key={c} className="flex h-44 flex-col justify-end bg-white p-3 shadow-sm">
-                  <button onClick={() => go('catalog', c)} className="rounded-sm bg-booked py-1.5 text-sm font-semibold text-white shadow">
+                <div key={c} className="flex h-96 flex-col justify-end bg-white p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]">
+                  <button onClick={() => go('catalog', c)} className="w-full rounded-sm bg-[#A66F5B] py-4 text-xl font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
                     {label(c)}{c === 'Costume' ? 's' : ''}
                   </button>
                 </div>
@@ -264,17 +267,26 @@ export default function CustomerApp({
             {products.length === 0 && !cat.error && <p className="text-sm text-ink/60">No items yet.</p>}
           </section>
 
-          <footer className="bg-ink px-6 py-10 text-xs text-cream">
-            <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8">
-              <div className="space-y-3"><p className="text-sm font-semibold">Rentify.</p><p>Search</p><p>Book A Fitting</p><p>FAQ</p><p>Terms and Conditions</p></div>
-              <div className="space-y-3"><p>SOCIALS</p><p className="flex items-center gap-2"><Facebook /> Facebook</p><p className="flex items-center gap-2"><Instagram /> Instagram</p></div>
+          <footer className="bg-ink px-10 py-20 text-xs text-cream">
+          <div className="mx-auto grid max-w-6xl grid-cols-2 gap-64">    <div className="space-y-3">
+                <p className="text-sm font-semibold">Rentify.</p>
+                <p>Search</p>
+                <p>Book A Fitting</p>
+                <p>FAQ</p>
+                <p>Terms and Conditions</p>
+              </div>
+              <div className="space-y-3">
+                <p>SOCIALS</p>
+                <p className="flex items-center gap-2"><Facebook /> Facebook</p>
+                <p className="flex items-center gap-2"><Instagram /> Instagram</p>
+              </div>
             </div>
           </footer>
         </>
       )}
 
       {view === 'catalog' && (
-        <main className="mx-auto max-w-6xl px-6 py-8">
+        <main className="mx-auto max-w-6xl px-3 py-8">
           <div className="mb-4">
             <button onClick={() => go('home')} aria-label="Back to home page"
               title="Back to home page" className="flex items-center text-sm font-medium hover:underline">
@@ -320,11 +332,15 @@ export default function CustomerApp({
       )}
 
       {view === 'profile' && session && (
-        <ProfilePage session={session} onSignOut={onSignOut} />
+        <AccountLayout tab="profile" onTab={(tab) => go(tab)}>
+          <ProfilePage session={session} onSignOut={onSignOut} />
+        </AccountLayout>
       )}
 
       {view === 'bookings' && (
-        <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
+        <AccountLayout tab="bookings" onTab={(tab) => go(tab)}>
+          <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
+        </AccountLayout>
       )}
 
       {view === 'messages' && session && (

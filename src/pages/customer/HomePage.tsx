@@ -25,7 +25,7 @@ export default function HomePage({
   return (
     <div>
       <section className="bg-reserved">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-14">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-10 py-">
           <div>
             <h1 className="text-3xl font-bold leading-snug">
               Dress for the moment,<br />

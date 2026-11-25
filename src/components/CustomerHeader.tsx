@@ -16,8 +16,15 @@ export default function CustomerHeader({
 }) {
   return (
     <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <button onClick={onHome} aria-label="Rentify home" className="text-xl font-semibold">Rentify.</button>
+      <div className="mx-auto flex max-w-10xl items-center px-6 py-4">
+      <button onClick={onHome} aria-label="Rentify home" className="text-2xl font-semibold">
+        Rentify.
+      </button>
+      <nav className="ml-20 hidden items-center gap-20 text-sm font-medium md:flex">
+        <button type="button">FAQ</button>
+        <button type="button">How It Works</button>
+        <button type="button" onClick={onBookings}>Book A Fitting</button>
+      </nav>
         {showBranches && (
           <nav className="flex gap-10 text-sm font-medium">
             {['All branches', ...branchNames].map((b) => (
@@ -28,8 +35,7 @@ export default function CustomerHeader({
             ))}
           </nav>
         )}
-        <div className="flex items-center gap-5">
-          {name && <span className="hidden text-sm sm:inline">{name}</span>}
+        <div className="ml-auto flex items-center gap-5">          {name && <span className="hidden text-sm sm:inline">{name}</span>}
           <button onClick={onMessages} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
           <button onClick={onProfile} title="My profile" aria-label="My profile"
             aria-current={activeAccountPage === 'profile' ? 'page' : undefined}
