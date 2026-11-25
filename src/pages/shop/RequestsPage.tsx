@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Shop } from '../../lib/shop'
-import { branchName, clash, fmt, inBranch, nights, norm, peso, rental } from '../../lib/shop'
+import { branchName, clash, DEFAULT_RETURN_GRACE_DAYS, fmt, inBranch, nights, norm, peso, rental, returnDeadline } from '../../lib/shop'
 import { btn, btn2, card, Field, input, Sub, Tag } from '../../lib/ui'
 
 const REASONS = [
@@ -64,13 +64,14 @@ export default function RequestsPage({ shop, branch }: { shop: Shop; branch: str
               <Field l="Customer" v={b.customer_name} />
               <Field l="Phone" v={b.customer_phone ?? '-'} />
               <Field l="Pickup" v={`${fmt(b.start_date)} at ${branchName(b)}`} />
-              <Field l="Return by" v={`${fmt(b.end_date)} at ${branchName(b)}`} />
+              <Field l="Rental period ends" v={fmt(b.end_date)} />
+              <Field l="Return no later than" v={`${fmt(returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))} at ${branchName(b)}`} />
               <Field l="Rental Length" v={`${n} day${n > 1 ? 's' : ''}`} />
               <Field l="Rental" v={peso(rental(b))} />
               <Field l="Transfer fee" v="None" />
               <Field l="Total rental" v={peso(rental(b))} />
               <Field l="Deposit at pickup" v={peso(x?.deposit ?? 0)} />
-              <Field l="Late fee" v={`${peso(x?.late_fee_per_day ?? 0)}/day`} />
+              <Field l="Late fee after grace period" v={`${peso(x?.late_fee_per_day ?? 0)}/day`} />
             </div>
             {b.note && (
               <div className="mb-4">

@@ -4,7 +4,8 @@ import { ChevronLeft } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import type { CBranch, CItem, CShop } from '../../lib/customer'
 import { longDate } from '../../lib/customer'
-import { addDays, peso, today } from '../../lib/shop'
+import { addDays, DEFAULT_RETURN_GRACE_DAYS, peso, returnDeadline, today } from '../../lib/shop'
+import { digitsOnly, isValidPhone } from '../../lib/name'
 
 const box = 'mt-1 w-full rounded-sm border border-ink/25 bg-white px-2 py-1.5 text-sm text-ink'
 
@@ -14,7 +15,7 @@ export default function ItemPage({
   item: CItem; branches: CBranch[]; shop?: CShop; session: Session | null
   onBack: () => void; onNeedAuth: () => void; onSent: (start: string, end: string) => void
 }) {
-  const [offset, setOffset] = useState(0)
+  const [start, setStart] = useState(today)
   const [days, setDays] = useState(1)
   const [phone, setPhone] = useState('')
   const [note, setNote] = useState('')
@@ -26,7 +27,6 @@ export default function ItemPage({
   const [err, setErr] = useState('')
   const [blockReason, setBlockReason] = useState('')
 
-  const start = addDays(today(), offset)
   const end = addDays(start, days - 1)
   const price = item.price_per_day ?? 0
   const deposit = item.deposit ?? 0
@@ -41,18 +41,16 @@ export default function ItemPage({
   useEffect(() => {
     setAvail(null)
     setBlockReason('')
+    if (!start) return
     ;(async () => {
       const buffer = item.buffer_days ?? 0
-      const { data: clash, error: clashError } = await supabase
+      const { data: bookings, error: clashError } = await supabase
         .from('bookings')
-        .select('id, customer_name, status')
+        .select('id, start_date, end_date, buffer_days, return_grace_days, status')
         .eq('item_id', item.id)
         .neq('status', 'cancelled')
         .neq('status', 'canceled')
         .neq('status', 'declined')
-        .lte('start_date', addDays(end, buffer))
-        .gte('end_date', addDays(start, -buffer))
-        .limit(1)
 
       if (clashError) {
         setErr(clashError.message)
@@ -60,9 +58,21 @@ export default function ItemPage({
         return
       }
 
-      if (clash && clash.length > 0) {
+      const requestedStart = addDays(start, -buffer)
+      const requestedEnd = addDays(end, DEFAULT_RETURN_GRACE_DAYS + buffer)
+      const clash = bookings?.find((booking) => {
+        const existingBuffer = booking.buffer_days ?? buffer
+        const existingStart = addDays(booking.start_date, -existingBuffer)
+        const existingEnd = addDays(
+          booking.end_date,
+          (booking.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + existingBuffer
+        )
+        return requestedStart <= existingEnd && existingStart <= requestedEnd
+      })
+
+      if (clash) {
         setAvail(false)
-        setBlockReason('These dates overlap an existing booking or its cleaning buffer.')
+        setBlockReason('These dates overlap an existing booking, its return grace period, or cleaning buffer.')
         return
       }
 
@@ -82,6 +92,7 @@ export default function ItemPage({
   async function reserve() {
     if (!session) return onNeedAuth()
     if (!phone.trim() || !ref.trim()) return setErr('Enter your mobile number and the payment reference no.')
+    if (!isValidPhone(phone)) return setErr('Enter your mobile number using 10 to 15 digits.')
     if (avail === false) {
       setErr(blockReason || 'Those dates are not available. Pick other dates.')
       return
@@ -101,7 +112,9 @@ export default function ItemPage({
       return_branch_id: ret || null,
     })
     setBusy(false)
-    if (error) setErr(error.message)
+    if (error) setErr(error.message.includes('DATES_UNAVAILABLE')
+      ? 'Those dates are no longer available. Pick other dates.'
+      : error.message)
     else onSent(start, end)
   }
 
@@ -136,9 +149,14 @@ export default function ItemPage({
 
           <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
             <label className="text-sm text-ink/70">Pickup day
-              <select className={box} value={offset} onChange={(e) => setOffset(+e.target.value)}>
-                {Array.from({ length: 14 }, (_, n) => <option key={n} value={n}>{longDate(addDays(today(), n))}</option>)}
-              </select>
+              <input
+                type="date"
+                className={box}
+                value={start}
+                min={today()}
+                max={addDays(today(), 13)}
+                onChange={(e) => setStart(e.target.value)}
+              />
             </label>
             <label className="text-sm text-ink/70">Day/s
               <select className={box} value={days} onChange={(e) => setDays(+e.target.value)}>
@@ -146,7 +164,7 @@ export default function ItemPage({
               </select>
             </label>
             <label className="text-sm text-ink/70">Mobile Number
-              <input className={box} placeholder="09## #### ###" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input type="tel" inputMode="numeric" minLength={10} maxLength={15} pattern="[0-9]{10,15}" required className={box} placeholder="Mobile number" value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} />
             </label>
             <label className="text-sm text-ink/70">Note to shop (optional)
               <input className={box} maxLength={140} value={note} onChange={(e) => setNote(e.target.value)} />
@@ -161,15 +179,15 @@ export default function ItemPage({
           </div>
           <p className="mt-3 text-sm">
             {avail === null ? 'Checking dates...'
-              : avail ? <><b className="font-semibold text-green-700">Available.</b> Return by {longDate(end)}.</>
+              : avail ? <><b className="font-semibold text-green-700">Available.</b> Rental ends {longDate(end)}; return by {longDate(returnDeadline(end))}.</>
               : <><b className="font-semibold text-red-600">Not available</b> for those dates. {blockReason || 'Try another day.'}</>}
           </p>
           <p className="mt-2 text-sm text-ink/50">
-            Deposit {peso(deposit)}. Late return: {peso(item.late_fee_per_day ?? 0)} per day. Missing pieces are charged from the deposit.
+            You have 7 days after the selected rental period ends to return the item. After {longDate(returnDeadline(end))}, late returns are {peso(item.late_fee_per_day ?? 0)} per day. Deposit {peso(deposit)}. Missing pieces are charged from the deposit.
           </p>
 
           <div className="mt-4 rounded-sm bg-reserved/40 p-4">
-            <h3 className="mb-1 text-xl font-bold">Pay the gown and deposit online ({peso(price * days)} + {peso(deposit)})</h3>
+            <h3 className="mb-1 text-xl font-bold">Pay the rental and deposit online ({peso(price * days)} + {peso(deposit)})</h3>
             <p className="mb-3 text-sm">Online payments only: e-wallet or bank transfer.</p>
             <div className="grid grid-cols-2 gap-4">
               <label className="text-sm text-ink/70">Payment method
@@ -206,10 +224,11 @@ export function SentPage({
         <h1 className="mb-3 text-xl font-bold">Request Sent</h1>
         <p className="mb-4">The shop will confirm your reservation of <b>{item.name}</b>.</p>
         {row('Pickup', longDate(start))}
-        {row('Return by', longDate(end))}
+        {row('Rental period ends', longDate(end))}
+        {row('Return no later than', longDate(returnDeadline(end)))}
         {row('Deposit', peso(item.deposit ?? 0))}
-        {row('Late fee', `${peso(item.late_fee_per_day ?? 0)}/day`)}
-        <p className="my-4 text-sm text-ink/50">You'll get a reminder the day before your return date.</p>
+        {row('Late fee after grace period', `${peso(item.late_fee_per_day ?? 0)}/day`)}
+        <p className="my-4 text-sm text-ink/50">You have 7 days after the rental period ends to return the item. Your return deadline is {longDate(returnDeadline(end))}.</p>
         <div className="text-center">
           <button onClick={onBookings}
             className="rounded-sm bg-ink px-6 py-2.5 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Booking, Shop } from '../../lib/shop'
-import { addDays, branchName, clash, diffDays, fmt, inBranch, norm, peso, today } from '../../lib/shop'
+import { addDays, branchName, clash, DEFAULT_RETURN_GRACE_DAYS, diffDays, fmt, inBranch, norm, peso, returnDeadline, today } from '../../lib/shop'
 import { btn, btn2, input, Sub } from '../../lib/ui'
 
 type B = Booking & {
@@ -40,7 +40,7 @@ export default function PickupReturnPage({ shop, branch }: { shop: Shop; branch:
         <select className={`${input} mt-1 py-3`} value={cur?.id ?? ''} onChange={(e) => setId(e.target.value)}>
           {list.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.items?.name} · {b.customer_name} · {norm(b.status) === 'out' ? `Return ${fmt(b.end_date)}` : `Pickup ${fmt(b.start_date)}`}
+              {b.items?.name} · {b.customer_name} · {norm(b.status) === 'out' ? `Return by ${fmt(returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}` : `Pickup ${fmt(b.start_date)}`}
             </option>
           ))}
         </select>
@@ -55,9 +55,10 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
   const ps = piecesOf(b)
   const fee = b.items?.late_fee_per_day ?? 0
   const deposit = b.items?.deposit ?? b.deposit_amount ?? 0
+  const deadline = returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
 
   const [ticked, setTicked] = useState<Record<string, boolean>>({})
-  const [late, setLate] = useState(Math.max(0, diffDays(b.end_date, today())))
+  const [late, setLate] = useState(Math.max(0, diffDays(deadline, today())))
   const [cond, setCond] = useState('Good')
   const [paid, setPaid] = useState(!!b.deposit_received || !!b.payment_ref)
   const [method, setMethod] = useState(b.payment_method ?? (b.payment_ref ? 'GCash' : 'Cash'))
@@ -69,7 +70,7 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
   const lateFee = waive ? 0 : late * fee
   const refund = Math.max(0, deposit - missingFee - lateFee)
   const update = (patch: object) => shop.act(supabase.from('bookings').update(patch).eq('id', b.id))
-  const lateEndDate = addDays(b.end_date, late)
+  const lateEndDate = addDays(deadline, late)
   const buffer = b.buffer_days ?? b.items?.buffer_days ?? 0
   const nextRisk = out
     ? shop.bookings.find((other) =>
@@ -77,7 +78,7 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
       other.item_id === b.item_id &&
       !['cancelled', 'canceled', 'declined'].includes(norm(other.status)) &&
       addDays(lateEndDate, other.buffer_days ?? other.items?.buffer_days ?? buffer) >= other.start_date &&
-      other.start_date > b.end_date
+      other.start_date > deadline
     )
     : undefined
 
@@ -107,10 +108,15 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
     <section className="mb-8 rounded-sm bg-white px-8 py-6 shadow-md">
       <h2 className="text-2xl font-bold">{out ? 'Return Checklist' : 'Pickup Checklist'}</h2>
       <p className="mb-5 mt-1 text-sm text-ink/70">
-        {b.items?.name} for <b>{b.customer_name}</b>.<br />Tick each piece you hand over or receive.
+        {b.items?.name} for         <b>{b.customer_name}</b>.<br />Tick each piece you hand over or receive.
       </p>
+      {out && (
+        <p className="mb-5 text-sm font-semibold text-ink/70">
+          Return no later than {fmt(deadline)}. Late fees begin after this date.
+        </p>
+      )}
       {b.extension_requested && (
-        <p className="mb-4 text-base font-semibold">Customer asked for 1 more day (until {fmt(addDays(b.end_date, 1))}).</p>
+        <p className="mb-4 text-base font-semibold">Customer asked for 1 more rental day (new return deadline {fmt(returnDeadline(addDays(b.end_date, 1), b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}).</p>
       )}
 
       <ul className="mb-5 border-b border-ink/15">
@@ -129,7 +135,7 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
       {out ? (
         <>
           <div className="mb-5 grid grid-cols-2 gap-10">
-            <label className="text-base text-ink/70">Days Late
+            <label className="text-base text-ink/70">Days Late (after {fmt(deadline)})
               <select className={`${input} mt-1 py-3`} value={late} onChange={(e) => setLate(+e.target.value)}>
                 {Array.from(new Set([...Array(15).keys(), late])).sort((x, y) => x - y).map((n) => <option key={n}>{n}</option>)}
               </select>

@@ -6,6 +6,7 @@ import {
   Users, BookOpen, BarChart3, Newspaper, TrendingUp, MessageCircle, User,
 } from 'lucide-react'
 import { useShop } from '../lib/shop'
+import { isValidName, digitsOnly, isValidPhone } from '../lib/name'
 import RequestsPage from './shop/RequestsPage'
 import TodayPage from './shop/TodayPage'
 import CalendarPage from './shop/CalendarPage'
@@ -64,6 +65,14 @@ function ShopOwnerSetup({ user, shop }: { user: SupabaseUser; shop: Shop }) {
 
   async function save(e: FormEvent) {
     e.preventDefault()
+    if (!isValidName(name)) {
+      setError('Owner name must contain letters and cannot contain numbers.')
+      return
+    }
+    if (!isValidPhone(phone)) {
+      setError('Enter your mobile number using 10 to 15 digits.')
+      return
+    }
     if (shop.loading) return
     if (plannedLocations.some((location) => !location.trim())) {
       setError('Enter a name for each branch location.')
@@ -132,13 +141,13 @@ function ShopOwnerSetup({ user, shop }: { user: SupabaseUser; shop: Shop }) {
           <label className="block text-sm text-ink/70">
             Owner name
             <input autoFocus required className="mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm"
-              value={name} onChange={(e) => setName(e.target.value)} />
+              value={name} onChange={(e) => setName(e.target.value.replace(/[\p{N}\d]/gu, ''))} />
           </label>
           <label className="block text-sm text-ink/70">
             Mobile number
-            <input required type="tel" placeholder="09xx xxx xxxx"
+            <input required type="tel" inputMode="numeric" minLength={10} maxLength={15} pattern="[0-9]{10,15}" placeholder="Mobile number"
               className="mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm"
-              value={phone} onChange={(e) => setPhone(e.target.value)} />
+              value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} />
           </label>
           <fieldset disabled={shop.loading || busy} className="space-y-2">
             <legend className="mb-2 text-sm font-semibold">Branch setup</legend>
@@ -244,7 +253,7 @@ export default function ShopApp({
                 </button>
               ))
             ) : (
-              <span className="text-sm font-semibold">{shop.branches[0]?.name ?? shopName}</span>
+              <span className="text-sm font-semibold">{shopName}</span>
             )}
           </nav>
           <div className="flex items-center gap-5">
