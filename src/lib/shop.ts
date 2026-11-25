@@ -25,7 +25,7 @@ export type Rule = { category: string; buffer_days: number; deposit: number; lat
 export type Branch = { id: string; name: string }
 export type Shop = ReturnType<typeof useShop>
 
-export const CATEGORIES = ['Gown', 'Barong', 'Costume', 'Formal wear']
+export const CATEGORIES = ['Gown', 'Traditional', 'Costume', 'Formal wear']
 
 /* ---------- dates ---------- */
 export const iso = (d: Date) =>

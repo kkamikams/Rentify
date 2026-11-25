@@ -19,7 +19,7 @@ type Product = { name: string; category: string | null; price: number; deposit: 
 type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages' | 'profile'
 type CustomerMeta = { full_name?: string; phone?: string | null; addresses?: string[] }
 
-const CATS = ['Gown', 'Formal wear', 'Costume', 'Barong']
+const CATS = ['Gown', 'Formal wear', 'Costume', 'Traditional']
 const label = (c: string) => (c === 'Formal wear' ? 'Formal Wear' : c)
 const amber = 'font-semibold text-[#E3A21A]'
 

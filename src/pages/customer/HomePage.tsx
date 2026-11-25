@@ -2,7 +2,7 @@ import type { CItem } from '../../lib/customer'
 import { ItemCard } from './CatalogPage'
 
 const TILES: [string, string][] = [
-  ['Gown', 'Gown'], ['Formal wear', 'Formal Wear'], ['Costume', 'Costumes'], ['Barong', 'Barong'],
+  ['Gown', 'Gown'], ['Formal wear', 'Formal Wear'], ['Costume', 'Costumes'], ['Traditional', 'Traditional'],
 ]
 
 const Heading = ({ children }: { children: string }) => (

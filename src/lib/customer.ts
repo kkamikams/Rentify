@@ -23,7 +23,7 @@ export type MyBooking = {
 export type Msg = { id: string; branch_id: string; sender: string; body: string; created_at: string }
 
 export const CATEGORY_TABS: [string, string][] = [
-  ['All', 'All'], ['Gown', 'Gown'], ['Formal wear', 'Formal Wear'], ['Costume', 'Costume'], ['Barong', 'Barong'],
+  ['All', 'All'], ['Gown', 'Gown'], ['Formal wear', 'Formal Wear'], ['Costume', 'Costume'], ['Traditional', 'Traditional'],
 ]
 export const STATUS_LABEL: Record<string, string> = {
   pending: 'Awaiting confirmation', reserved: 'Reserved', out: 'Picked up', in_transit: 'Returned',
