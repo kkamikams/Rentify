@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { ArrowLeft, Eye, EyeOff, Lock, LogIn, Mail, Phone, User, UserPlus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { isValidName, digitsOnly, isValidPhone } from '../lib/name'
 
 type Role = 'customer' | 'shop'
 const LABEL: Record<Role, string> = { customer: 'Customer', shop: 'Shop owner' }
@@ -39,15 +38,6 @@ export default function AuthPage({ onHome }: { onHome?: () => void }) {
     e.preventDefault()
     setError('')
     setInfo('')
-
-    if (mode === 'signup' && !isValidName(fullName)) {
-      setError('Full name must contain letters and cannot contain numbers.')
-      return
-    }
-    if (mode === 'signup' && role === 'customer' && !isValidPhone(phone)) {
-      setError('Enter your mobile number using 10 to 15 digits.')
-      return
-    }
     setBusy(true)
 
     if (mode === 'signup') {
@@ -81,74 +71,6 @@ export default function AuthPage({ onHome }: { onHome?: () => void }) {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="flex min-h-screen items-center justify-center bg-cream p-6">
-      <div className="w-full max-w-sm rounded-sm bg-white p-8 shadow-sm">
-        {mode === 'signup' && (
-          <button
-            type="button"
-            className="mb-4 flex items-center gap-1 text-sm font-medium text-ink/70 hover:text-ink"
-            onClick={() => { setMode('login'); setError(''); setInfo('') }}
-            aria-label="Back to log in"
-          >
-            <ArrowLeft size={16} />
-            Back to log in
-          </button>
-        )}
-        <h1 className="text-2xl font-semibold">Rentify.</h1>
-        <p className="mb-6 mt-1 text-sm text-ink/60">
-          {mode === 'login' ? 'Log in to your account.' : 'Create your account.'}
-        </p>
-
-        <div className="mb-5 grid grid-cols-2 gap-2">
-          {(['customer', 'shop'] as Role[]).map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setRole(r)}
-              className={`rounded-sm px-3 py-2 text-sm font-medium ${
-                role === r ? 'bg-ink text-cream' : 'bg-cell text-ink'
-              }`}
-            >
-              {LABEL[r]}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={submit} className="space-y-3">
-          {mode === 'signup' && (
-            <>
-              <input required className={inputCls} placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value.replace(/[\p{N}\d]/gu, ''))} />
-              {role === 'customer' && (
-                <input type="tel" inputMode="numeric" minLength={10} maxLength={15} pattern="[0-9]{10,15}" required className={inputCls} placeholder="Mobile number" value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} />
-              )}
-            </>
-          )}
-          <input required type="email" className={inputCls} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input required type="password" minLength={6} className={inputCls} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-sm bg-booked px-3 py-2.5 text-sm font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)] disabled:opacity-50"
-          >
-            {busy ? 'Please wait...' : mode === 'login' ? `Log in as ${LABEL[role].toLowerCase()}` : `Sign up as ${LABEL[role].toLowerCase()}`}
-          </button>
-        </form>
-
-        {error && <p className="mt-4 text-sm text-cleaning">{error}</p>}
-        {info && <p className="mt-4 text-sm text-green-800">{info}</p>}
-
-        <p className="mt-6 text-sm text-ink/70">
-          {mode === 'login' ? 'New to Rentify?' : 'Already have an account?'}{' '}
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setInfo('') }}
-          >
-            {mode === 'login' ? 'Sign up' : 'Log in'}
-          </button>
-        </p>
-=======
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-[linear-gradient(180deg,#E6C3B1_0%,#F1DCCF_45%,#F8F3EA_100%)] text-ink">
       {/* Soft clouds */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2">
@@ -157,7 +79,6 @@ export default function AuthPage({ onHome }: { onHome?: () => void }) {
         <div className="absolute -bottom-20 -right-24 h-72 w-[30rem] rounded-full bg-white/80 blur-3xl" />
         <div className="absolute bottom-24 left-[8%] h-28 w-64 rounded-full bg-white/50 blur-2xl" />
         <div className="absolute bottom-40 right-[10%] h-24 w-56 rounded-full bg-white/50 blur-2xl" />
->>>>>>> backup-remote
       </div>
 
       {/* Rentify wordmark: top-middle, links to the homepage */}
