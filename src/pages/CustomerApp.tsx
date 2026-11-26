@@ -354,7 +354,7 @@ export default function CustomerApp({
       )}
 
       {view === 'profile' && session && (
-        <AccountLayout tab="profile" onTab={(tab) => go(tab)}>
+        <AccountLayout tab="profile" onTab={(tab) => go(tab)} onHome={() => go('home')}>
           <ProfilePage
             session={session}
             onSignOut={() => {
@@ -367,7 +367,7 @@ export default function CustomerApp({
       )}
 
       {view === 'bookings' && (
-        <AccountLayout tab="bookings" onTab={(tab) => go(tab)}>
+        <AccountLayout tab="bookings" onTab={(tab) => go(tab)} onHome={() => go('home')}>
           <MyBookingsPage onMessage={(b) => { setMsgBranch(b); go('messages') }} />
         </AccountLayout>
       )}
