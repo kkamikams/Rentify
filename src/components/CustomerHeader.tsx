@@ -4,18 +4,14 @@ import NotificationBell from './NotificationBell'
 import type { Notification } from './NotificationBell'
 
 export default function CustomerHeader({
-  name, showBranches, branch, branchNames, activeAccountPage, userId, onNotificationOpen,
-  onHome, onBranchChange, onMessages, onProfile, onBookings,
+  name, activeAccountPage, userId, onNotificationOpen,
+  onHome, onMessages, onProfile, onBookings,
 }: {
   name?: string
-  showBranches: boolean
-  branch: string
-  branchNames: string[]
   activeAccountPage?: 'messages' | 'profile' | 'bookings'
   userId?: string
   onNotificationOpen?: (notification: Notification) => void
   onHome: () => void
-  onBranchChange: (branch: string) => void
   onMessages: () => void
   onProfile: () => void
   onBookings: () => void
@@ -34,16 +30,6 @@ export default function CustomerHeader({
         <button type="button">How It Works</button>
         <button type="button" onClick={onBookings}>Book A Fitting</button>
       </nav>
-        {showBranches && (
-          <nav className="flex gap-10 text-sm font-medium">
-            {['All branches', ...branchNames].map((b) => (
-              <button key={b} onClick={() => onBranchChange(b)}
-                className={`pb-0.5 ${branch === b ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
-                {b}
-              </button>
-            ))}
-          </nav>
-        )}
         <div className="ml-auto flex items-center gap-5">          {name && <span className="hidden text-sm sm:inline">{name}</span>}
           {userId && onNotificationOpen && (
             <NotificationBell userId={userId} onOpen={onNotificationOpen} onOpenChange={setNotificationsOpen} />

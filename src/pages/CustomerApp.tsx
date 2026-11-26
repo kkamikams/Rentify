@@ -4,7 +4,6 @@ import type { Session } from '@supabase/supabase-js'
 import { ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { peso } from '../lib/shop'
-import { Tag } from '../lib/ui'
 import { isValidName, digitsOnly, isValidPhone } from '../lib/name'
 import { useCatalog } from '../lib/customer'
 import type { CItem } from '../lib/customer'
@@ -15,7 +14,7 @@ import MyBookingsPage from './customer/MyBookingspage'
 import MessagesPage from './customer/MessagesPage'
 import ProfilePage, { AccountLayout } from './customer/ProfilePage'
 
-type Product = { name: string; category: string | null; price: number; deposit: number; branches: string[]; rows: CItem[] }
+type Product = { name: string; category: string | null; price: number; deposit: number; rows: CItem[] }
 type View = 'home' | 'catalog' | 'item' | 'sent' | 'bookings' | 'messages' | 'profile'
 type CustomerMeta = { full_name?: string; phone?: string | null; addresses?: string[] }
 
@@ -124,7 +123,7 @@ const Instagram = () => (
   </svg>
 )
 
-function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOpen: () => void }) {
+function Card({ p, onOpen }: { p: Product; onOpen: () => void }) {
   const [hovered, setHovered] = useState(false)
   const images = itemImages(p.rows[0])
   return (
@@ -135,9 +134,6 @@ function Card({ p, showBranch, onOpen }: { p: Product; showBranch: boolean; onOp
       </div>
       <p className="mt-2 h-5 text-[13px] leading-5">{p.name}</p>
       <p className="h-5 text-[11px]"><span className={amber}>{peso(p.price)}</span> + {peso(p.deposit)} deposit</p>
-      {showBranch && (
-        <div className="mt-1 flex flex-wrap gap-1">{p.branches.map((b) => <Tag key={b}>{b}</Tag>)}</div>
-      )}
     </button>
   )
 }
@@ -148,7 +144,6 @@ export default function CustomerApp({
   const cat = useCatalog()
   const [session, setSession] = useState<Session | null>(null)
   const [view, setView] = useState<View>('home')
-  const [branch, setBranch] = useState('All branches')
   const [category, setCategory] = useState('All')
   const [q, setQ] = useState('')
   const [itemId, setItemId] = useState('')
@@ -167,27 +162,16 @@ export default function CustomerApp({
     [cat.items]
   )
 
-  // Branch names come from the items. One branch = no branch tabs and no branch tags.
-  const branchNames = useMemo(
-    () => [...new Set(rows.map((r) => r.branches?.name).filter((n): n is string => !!n))].sort(),
-    [rows]
-  )
-  const multi = branchNames.length > 1
-  const active = multi ? branch : 'All branches'
-
-  // One card per item name; the tags list every branch that has it
+  // Show one card per item name across the customer catalog.
   const products = useMemo(() => {
     const m = new Map<string, Product>()
-    rows
-      .filter((r) => active === 'All branches' || r.branches?.name === active)
-      .forEach((r) => {
-        const p = m.get(r.name) ?? { name: r.name, category: r.category, price: r.price_per_day ?? 0, deposit: r.deposit ?? 0, branches: [], rows: [] }
-        if (r.branches?.name && !p.branches.includes(r.branches.name)) p.branches.push(r.branches.name)
-        p.rows.push(r)
-        m.set(r.name, p)
-      })
+    rows.forEach((r) => {
+      const p = m.get(r.name) ?? { name: r.name, category: r.category, price: r.price_per_day ?? 0, deposit: r.deposit ?? 0, rows: [] }
+      p.rows.push(r)
+      m.set(r.name, p)
+    })
     return [...m.values()]
-  }, [rows, active])
+  }, [rows])
 
   const shown = products.filter(
     (p) => (category === 'All' || p.category === category) && p.name.toLowerCase().includes(q.toLowerCase())
@@ -199,7 +183,7 @@ export default function CustomerApp({
     setView(v); setCategory(c); window.scrollTo(0, 0)
   }
   const open = (p: Product) => {
-    const r = p.rows.find((x) => x.branches?.name === active) ?? p.rows[0]
+    const r = p.rows[0]
     setItemId(r.id)
     setView('item')
     window.scrollTo(0, 0)
@@ -218,9 +202,6 @@ export default function CustomerApp({
 
         <CustomerHeader
         name={name}
-        showBranches={multi && !account}
-        branch={view === 'catalog' ? active : ''}
-        branchNames={branchNames}
         activeAccountPage={view === 'profile' || view === 'bookings' || view === 'messages' ? view : undefined}
         userId={session?.user.id}
         onNotificationOpen={(notification) => {
@@ -233,7 +214,6 @@ export default function CustomerApp({
           }
         }}
         onHome={() => go('home')}
-        onBranchChange={(b) => { setBranch(b); go('catalog') }}
         onMessages={() => { setMsgBranch(undefined); go('messages') }}
         onProfile={() => go('profile')}
         onBookings={() => go('bookings')}
@@ -294,7 +274,7 @@ export default function CustomerApp({
             <div className="flex gap-5 overflow-x-auto pb-4">
               {products.map((p) => (
                 <div key={p.name} className="w-72 shrink-0">
-                  <Card p={p} showBranch={multi} onOpen={() => open(p)} />
+                  <Card p={p} onOpen={() => open(p)} />
                 </div>
               ))}
             </div>
@@ -342,7 +322,7 @@ export default function CustomerApp({
               className="w-32 rounded-full bg-cell px-3 py-0.5 text-[10px]" />
           </div>
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-            {shown.map((p) => <Card key={p.name} p={p} showBranch={multi} onOpen={() => open(p)} />)}
+            {shown.map((p) => <Card key={p.name} p={p} onOpen={() => open(p)} />)}
           </div>
           {shown.length === 0 && !cat.error && <p className="text-center text-sm text-ink/60">No items found.</p>}
         </main>
