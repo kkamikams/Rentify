@@ -335,20 +335,20 @@ export default function CustomerApp({
 
       {view === 'catalog' && (
         <main className="mx-auto max-w-6xl px-3 py-8">
-          <div className="mb-4">
+          <div className="relative mb-4 flex min-h-6 items-center justify-center">
             <button onClick={() => go('home')} aria-label="Back to home page"
-              title="Back to home page" className="flex items-center text-sm font-medium hover:underline">
+              title="Back to home page" className="absolute left-0 flex items-center text-sm font-medium hover:underline">
               <ArrowLeft size={18} />
             </button>
+            <nav className="flex justify-center gap-8 text-sm font-medium">
+              {['All', ...CATS].map((c) => (
+                <button key={c} onClick={() => setCategory(c)}
+                  className={`pb-0.5 ${category === c ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
+                  {c === 'All' ? 'All' : label(c)}
+                </button>
+              ))}
+            </nav>
           </div>
-          <nav className="mb-4 flex justify-center gap-8 text-sm font-medium">
-            {['All', ...CATS].map((c) => (
-              <button key={c} onClick={() => setCategory(c)}
-                className={`pb-0.5 ${category === c ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
-                {c === 'All' ? 'All' : label(c)}
-              </button>
-            ))}
-          </nav>
           <div className="mb-6 flex items-center justify-center gap-4 text-[10px] text-ink/70">
             <span>{shown.length} products</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search"
