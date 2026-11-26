@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import type { Shop } from '../../lib/shop'
-import { branchName, DEFAULT_RETURN_GRACE_DAYS, diffDays, fmt, income, inBranch, isSold, norm, peso, returnDeadline, today } from '../../lib/shop'
+import { branchName, diffDays, fmt, income, inBranch, isSold, norm, peso, returnDeadline, today } from '../../lib/shop'
 import { card, Sub, td, th } from '../../lib/ui'
 
 export default function CustomersPage({ shop, branch }: { shop: Shop; branch: string }) {
@@ -17,8 +17,8 @@ export default function CustomersPage({ shop, branch }: { shop: Shop; branch: st
         phone: list[0].customer_phone,
         spent: list.reduce((s, b) => s + income(b), 0),
         owes: list
-          .filter((b) => norm(b.status) === 'out' && returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) < now)
-          .reduce((s, b) => s + diffDays(returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS), now) * (b.items?.late_fee_per_day ?? 0), 0),
+          .filter((b) => norm(b.status) === 'out' && returnDeadline(b.end_date) < now)
+          .reduce((s, b) => s + diffDays(returnDeadline(b.end_date), now) * (b.items?.late_fee_per_day ?? 0), 0),
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [shop.bookings, branch])
@@ -40,7 +40,7 @@ export default function CustomersPage({ shop, branch }: { shop: Shop; branch: st
                 {open === r.name && r.list.map((b) => (
                   <tr key={b.id} className="bg-cream/60">
                     <td className={`${td} pl-4`} colSpan={5}>
-                      {b.items?.name} · {fmt(b.start_date)} - {fmt(b.end_date)} (return by {fmt(returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}) · {norm(b.status).replace('_', ' ')} · {peso(income(b))}
+                      {b.items?.name} · {fmt(b.start_date)} - {fmt(b.end_date)} (return by {fmt(returnDeadline(b.end_date))}) · {norm(b.status).replace('_', ' ')} · {peso(income(b))}
                     </td>
                   </tr>
                 ))}

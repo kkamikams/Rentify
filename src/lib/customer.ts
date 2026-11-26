@@ -44,8 +44,8 @@ export const longDate = (s: string) => {
   return new Date(y, m - 1, d).toLocaleDateString('en-PH', { month: 'long', day: 'numeric' })
 }
 
-// Public catalog: items, branches and the shop's payment details
-export function useCatalog() {
+// Public catalog, optionally limited to one shop's inventory.
+export function useCatalog(shopId?: string) {
   const [items, setItems] = useState<CItem[]>([])
   const [branches, setBranches] = useState<CBranch[]>([])
   const [shops, setShops] = useState<CShop[]>([])
@@ -56,7 +56,9 @@ export function useCatalog() {
 
     const load = async () => {
       const [i, b] = await Promise.all([
-        supabase.from('items').select('*, branches(name)').order('name'),
+        shopId
+          ? supabase.from('items').select('*, branches(name)').eq('shop_id', shopId).order('name')
+          : supabase.from('items').select('*, branches(name)').order('name'),
         supabase.from('branches').select('id, shop_id, name').order('name'),
       ])
       let s = await supabase.from('shops')
@@ -80,7 +82,7 @@ export function useCatalog() {
       active = false
       void supabase.removeChannel(channel)
     }
-  }, [])
+  }, [shopId])
 
   return { items, branches, shops, error }
 }

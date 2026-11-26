@@ -37,7 +37,7 @@ export const addDays = (s: string, n: number) => {
   return iso(new Date(y, m - 1, d + n))
 }
 export const DEFAULT_RETURN_GRACE_DAYS = 7
-export const returnDeadline = (end: string, graceDays = DEFAULT_RETURN_GRACE_DAYS) => addDays(end, graceDays)
+export const returnDeadline = (end: string) => addDays(end, DEFAULT_RETURN_GRACE_DAYS)
 export const diffDays = (a: string, b: string) => Math.round((utc(b) - utc(a)) / 86400000)
 export const fmt = (s: string) => {
   const [y, m, d] = s.split('-').map(Number)
@@ -59,13 +59,13 @@ export const inBranch = (branch: string, name?: string) => branch === 'All branc
 export function clash(b: Booking, all: Booking[]) {
   const buffer = b.buffer_days ?? b.items?.buffer_days ?? 0
   const start = addDays(b.start_date, -buffer)
-  const end = addDays(b.end_date, (b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + buffer)
+  const end = addDays(b.end_date, DEFAULT_RETURN_GRACE_DAYS + buffer)
   return all.find(
     (o) => {
       if (o.id === b.id || o.item_id !== b.item_id || !isSold(o)) return false
       const otherBuffer = o.buffer_days ?? o.items?.buffer_days ?? buffer
       const otherStart = addDays(o.start_date, -otherBuffer)
-      const otherEnd = addDays(o.end_date, (o.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + otherBuffer)
+      const otherEnd = addDays(o.end_date, DEFAULT_RETURN_GRACE_DAYS + otherBuffer)
       return start <= otherEnd && otherStart <= end
     }
   )

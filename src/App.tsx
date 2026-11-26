@@ -70,9 +70,11 @@ export default function App() {
   }
 
   if (role === 'customer') {
+    const catalogShopId = session.user.user_metadata?.catalog_shop_id
     return (
       <CustomerApp
         name={session.user.user_metadata?.full_name}
+        catalogShopId={typeof catalogShopId === 'string' ? catalogShopId : undefined}
         onSignOut={() => supabase.auth.signOut()}
       />
     )

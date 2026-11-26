@@ -68,7 +68,7 @@ export default function ItemPage({
         const existingStart = addDays(booking.start_date, -existingBuffer)
         const existingEnd = addDays(
           booking.end_date,
-          (booking.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + existingBuffer
+          DEFAULT_RETURN_GRACE_DAYS + existingBuffer
         )
         return requestedStart <= existingEnd && existingStart <= requestedEnd
       })
@@ -110,7 +110,8 @@ export default function ItemPage({
       shop_id: item.shop_id, item_id: item.id, customer_id: session.user.id,
       customer_name: meta.full_name ?? session.user.email?.split('@')[0] ?? 'Customer',
       customer_phone: phone.trim(), note: note.trim() || null,
-      start_date: start, end_date: end, buffer_days: item.buffer_days,
+      start_date: start, end_date: end, return_grace_days: DEFAULT_RETURN_GRACE_DAYS,
+      buffer_days: item.buffer_days,
       status: 'pending', deposit_amount: deposit, payment_method: method, payment_ref: ref.trim(),
       return_branch_id: ret || null,
     })

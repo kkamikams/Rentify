@@ -55,7 +55,7 @@ const NEEDS_CLEANING = ['returned', 'in_transit', 'cleaning', 'completed']
 function cellFor(b: Booking, buffer: number, day: string, today: string) {
   const status = norm(b.status)
   if (status === 'cancelled' || status === 'canceled') return null
-  const graceEnd = addDays(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
+  const graceEnd = addDays(b.end_date, DEFAULT_RETURN_GRACE_DAYS)
 
   // Between start and end: color depends on the status
   if (day >= b.start_date && day <= b.end_date) {
@@ -81,7 +81,7 @@ function blockedReason(item: Item, day: string, today: string) {
     if (status === 'cancelled' || status === 'canceled' || status === 'declined') continue
 
     const buffer = b.buffer_days ?? item.buffer_days ?? 0
-    const graceEnd = addDays(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
+    const graceEnd = addDays(b.end_date, DEFAULT_RETURN_GRACE_DAYS)
     if (day >= b.start_date && day <= b.end_date) {
       return 'Booked: item is reserved'
     }
@@ -111,7 +111,7 @@ function rangeBlockedReason(item: Item, start: string, nights: number, today: st
     const buffer = b.buffer_days ?? item.buffer_days ?? 0
     const graceDays = NEEDS_CLEANING.includes(status)
       ? 0
-      : b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS
+      : DEFAULT_RETURN_GRACE_DAYS
     const graceEnd = addDays(b.end_date, graceDays)
     const blockedStart = addDays(b.start_date, -buffer)
     const blockedEnd = addDays(graceEnd, buffer)
@@ -153,7 +153,7 @@ const LEGEND: { color: Color; label: string }[] = [
 
 const fieldCls = 'mt-1 w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm text-ink'
 
-export default function CalendarPage({ branch }: { branch: string }) {
+export default function CalendarPage({ branch, shopId }: { branch: string; shopId?: string }) {
   const today = iso(new Date())
   const [month, setMonth] = useState(today.slice(0, 7)) // 'YYYY-MM'
   const [items, setItems] = useState<Item[]>([])
@@ -181,19 +181,30 @@ export default function CalendarPage({ branch }: { branch: string }) {
   const shiftMonth = (n: number) => setMonth(iso(new Date(y, m - 1 + n, 1)).slice(0, 7))
 
   useEffect(() => {
+    let active = true
+    if (!shopId) {
+      setItems([])
+      setError('')
+      setLoading(false)
+      return () => { active = false }
+    }
+
     setLoading(true)
     supabase
       .from('items')
       .select('id, shop_id, name, buffer_days, branches(name), bookings(id, customer_name, start_date, end_date, return_grace_days, buffer_days, status)')
+      .eq('shop_id', shopId)
       .lte('bookings.start_date', days[days.length - 1])
       .gte('bookings.end_date', addDays(days[0], -30)) // margin so late/cleaning days still show
       .order('name')
       .then(({ data, error }) => {
+        if (!active) return
         if (error) setError(error.message)
         else { setError(''); setItems((data ?? []) as unknown as Item[]) }
         setLoading(false)
       })
-  }, [days, reload])
+    return () => { active = false }
+  }, [days, reload, shopId])
 
   const visible = items.filter((i) => branch === 'All branches' || i.branches?.name === branch)
     const multi = new Set(items.map((i) => i.branches?.name)).size > 1
@@ -244,7 +255,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
       const existingStart = addDays(booking.start_date, -existingBuffer)
       const existingEnd = addDays(
         booking.end_date,
-        (booking.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS) + existingBuffer
+        DEFAULT_RETURN_GRACE_DAYS + existingBuffer
       )
       return requestedStart <= existingEnd && existingStart <= requestedEnd
     })
@@ -261,6 +272,7 @@ export default function CalendarPage({ branch }: { branch: string }) {
       customer_phone: phone.trim() || null,
       start_date: startDate,
       end_date: endDate,
+      return_grace_days: DEFAULT_RETURN_GRACE_DAYS,
       buffer_days: buffer,
       status: 'reserved',
     })

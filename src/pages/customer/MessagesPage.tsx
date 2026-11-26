@@ -16,10 +16,16 @@ export default function MessagesPage({
   const [err, setErr] = useState('')
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.from('messages').select('*').order('created_at')
+    if (!branches.length) {
+      setMsgs([])
+      return
+    }
+    const { data, error } = await supabase.from('messages').select('*')
+      .in('branch_id', branches.map((branch) => branch.id))
+      .order('created_at')
     if (error) setErr(error.message)
     else setMsgs((data ?? []) as unknown as Msg[])
-  }, [])
+  }, [branches])
   useEffect(() => {
     load()
     const t = setInterval(load, 8000) // check for new replies
@@ -27,7 +33,13 @@ export default function MessagesPage({
   }, [load])
 
   const cur = branches.find((b) => b.id === sel) ?? branches[0]
-  const shopName = cur ? shops.find((shop) => shop.id === cur.shop_id)?.name ?? cur.name : ''
+  const conversationName = (branch: CBranch) => {
+    const shopBranches = branches.filter((candidate) => candidate.shop_id === branch.shop_id)
+    return shopBranches.length === 1
+      ? shops.find((shop) => shop.id === branch.shop_id)?.name ?? branch.name
+      : branch.name
+  }
+  const branchName = cur ? conversationName(cur) : ''
   const thread = msgs.filter((m) => m.branch_id === cur?.id)
 
   async function send(e: FormEvent) {
@@ -51,7 +63,7 @@ export default function MessagesPage({
               className={`mb-1 flex w-full items-center gap-3 rounded-sm p-2 text-left ${cur?.id === b.id ? 'bg-cream' : ''}`}>
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-reserved"><User size={16} /></span>
               <span className="min-w-0 text-sm">
-                <span className="block text-sm font-semibold">{shops.find((shop) => shop.id === b.shop_id)?.name ?? b.name}</span>
+                <span className="block text-sm font-semibold">{conversationName(b)}</span>
                 <span className="block truncate text-ink/60">{last?.body ?? 'No messages yet'}</span>
               </span>
             </button>
@@ -70,7 +82,7 @@ export default function MessagesPage({
             <ArrowLeft size={20} />
           </button>
           <span className="grid h-10 w-10 place-items-center rounded-full bg-reserved"><User size={18} /></span>
-          <span className="text-xl font-bold">{shopName}</span>
+          <span className="text-xl font-bold">{branchName}</span>
         </header>
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
           {thread.map((m, i) => {
@@ -85,7 +97,7 @@ export default function MessagesPage({
               </div>
             )
           })}
-          {thread.length === 0 && <p className="m-auto text-sm text-ink/50">Say hi to {shopName}.</p>}
+          {thread.length === 0 && <p className="m-auto text-sm text-ink/50">Say hi to {branchName}.</p>}
         </div>
         {err && <p className="px-4 text-sm text-cleaning">{err}</p>}
         <form onSubmit={send} className="flex gap-3 p-4">

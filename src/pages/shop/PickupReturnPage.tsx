@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Booking, Shop } from '../../lib/shop'
-import { addDays, branchName, clash, DEFAULT_RETURN_GRACE_DAYS, diffDays, fmt, inBranch, norm, peso, returnDeadline, today } from '../../lib/shop'
+import { addDays, branchName, clash, diffDays, fmt, inBranch, norm, peso, returnDeadline, today } from '../../lib/shop'
 import { btn, btn2, input, Sub } from '../../lib/ui'
 
 type B = Booking & {
@@ -40,7 +40,7 @@ export default function PickupReturnPage({ shop, branch }: { shop: Shop; branch:
         <select className={`${input} mt-1 py-3`} value={cur?.id ?? ''} onChange={(e) => setId(e.target.value)}>
           {list.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.items?.name} · {b.customer_name} · {norm(b.status) === 'out' ? `Return by ${fmt(returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}` : `Pickup ${fmt(b.start_date)}`}
+              {b.items?.name} · {b.customer_name} · {norm(b.status) === 'out' ? `Return by ${fmt(returnDeadline(b.end_date))}` : `Pickup ${fmt(b.start_date)}`}
             </option>
           ))}
         </select>
@@ -55,7 +55,7 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
   const ps = piecesOf(b)
   const fee = b.items?.late_fee_per_day ?? 0
   const deposit = b.items?.deposit ?? b.deposit_amount ?? 0
-  const deadline = returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
+  const deadline = returnDeadline(b.end_date)
 
   const [ticked, setTicked] = useState<Record<string, boolean>>({})
   const [late, setLate] = useState(Math.max(0, diffDays(deadline, today())))
@@ -126,7 +126,7 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
         </p>
       )}
       {b.extension_requested && (
-        <p className="mb-4 text-base font-semibold">Customer asked for 1 more rental day (new return deadline {fmt(returnDeadline(addDays(b.end_date, 1), b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}).</p>
+        <p className="mb-4 text-base font-semibold">Customer asked for 1 more rental day (new return deadline {fmt(returnDeadline(addDays(b.end_date, 1)))}).</p>
       )}
 
       <ul className="mb-5">

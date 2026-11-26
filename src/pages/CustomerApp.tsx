@@ -139,12 +139,13 @@ function Card({ p, onOpen }: { p: Product; onOpen: () => void }) {
 }
 
 export default function CustomerApp({
-  name, onSignOut, guest = false, onNeedAuth,
-}: { name?: string; onSignOut: () => void; guest?: boolean; onNeedAuth?: () => void }) {
-  const cat = useCatalog()
+  name, onSignOut, guest = false, onNeedAuth, catalogShopId,
+}: { name?: string; onSignOut: () => void; guest?: boolean; onNeedAuth?: () => void; catalogShopId?: string }) {
+  const cat = useCatalog(catalogShopId)
   const [session, setSession] = useState<Session | null>(null)
   const [view, setView] = useState<View>('home')
   const [category, setCategory] = useState('All')
+  const [branchId, setBranchId] = useState('all')
   const [q, setQ] = useState('')
   const [itemId, setItemId] = useState('')
   const [sent, setSent] = useState({ start: '', end: '' })
@@ -156,10 +157,17 @@ export default function CustomerApp({
     return () => data.subscription.unsubscribe()
   }, [])
 
+  const scopedBranches = useMemo(
+    () => catalogShopId ? cat.branches.filter((branch) => branch.shop_id === catalogShopId) : [],
+    [cat.branches, catalogShopId]
+  )
+
   // Newest items first
   const rows = useMemo(
-    () => [...cat.items].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
-    [cat.items]
+    () => cat.items
+      .filter((item) => branchId === 'all' || item.branch_id === branchId)
+      .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
+    [cat.items, branchId]
   )
 
   // Show one card per item name across the customer catalog.
@@ -177,7 +185,9 @@ export default function CustomerApp({
     (p) => (category === 'All' || p.category === category) && p.name.toLowerCase().includes(q.toLowerCase())
   )
   const categoryImage = (value: string) =>
-    cat.shops.find((shop) => shop.category_images?.[value])?.category_images?.[value]
+    (catalogShopId
+      ? cat.shops.find((shop) => shop.id === catalogShopId)?.category_images?.[value]
+      : cat.shops.find((shop) => shop.category_images?.[value])?.category_images?.[value])
     ?? cat.items.find((item) => item.category === value && item.image_url)?.image_url
 
   const go = (v: View, c = 'All') => {
@@ -191,7 +201,7 @@ export default function CustomerApp({
     setView('item')
     window.scrollTo(0, 0)
   }
-  const item = cat.items.find((i) => i.id === itemId)
+  const item = rows.find((i) => i.id === itemId)
   const account = view === 'profile' || view === 'bookings'
 
   return (
@@ -222,6 +232,22 @@ export default function CustomerApp({
         onBookings={() => go('bookings')}
         />
       </div>
+      {catalogShopId && scopedBranches.length > 1 && view === 'catalog' && (
+        <nav aria-label="Shop branches" className="border-t border-ink/10 bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
+          <div className="mx-auto flex max-w-10xl justify-center gap-8 overflow-x-auto px-6 py-3 text-sm font-medium">
+            <button type="button" onClick={() => setBranchId('all')}
+              className={branchId === 'all' ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}>
+              All branches
+            </button>
+            {scopedBranches.map((branch) => (
+              <button key={branch.id} type="button" onClick={() => setBranchId(branch.id)}
+                className={branchId === branch.id ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}>
+                {branch.name}
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
 
       {session && <CustomerProfileSetup key={session.user.id} user={session.user} />}
 
@@ -373,7 +399,8 @@ export default function CustomerApp({
       )}
 
       {view === 'messages' && session && (
-        <MessagesPage session={session} branches={cat.branches} shops={cat.shops}
+        <MessagesPage session={session} branches={catalogShopId ? scopedBranches : cat.branches}
+          shops={catalogShopId ? cat.shops.filter((shop) => shop.id === catalogShopId) : cat.shops}
           initialBranch={msgBranch} onBack={() => go('home')} />
       )}
     </div>

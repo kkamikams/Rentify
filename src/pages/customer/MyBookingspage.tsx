@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { MyBooking } from '../../lib/customer'
-import { addDays, DEFAULT_RETURN_GRACE_DAYS, diffDays, fmt, norm, peso, returnDeadline, today } from '../../lib/shop'
+import { addDays, diffDays, fmt, norm, peso, returnDeadline, today } from '../../lib/shop'
 import { longDate } from '../../lib/customer'
 
 const btnDark = 'w-full rounded-sm bg-booked px-4 py-2 text-xs font-semibold text-white shadow-[0_2px_3px_rgba(0,0,0,0.35)]'
@@ -23,7 +23,6 @@ async function downloadReceiptPdf(booking: MyBooking) {
   const item = booking.items
   const start = booking.quoted_start_date ?? booking.start_date
   const end = booking.quoted_end_date ?? booking.end_date
-  const graceDays = booking.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS
   const rentalDays = diffDays(start, end) + 1
   const dailyRate = booking.quoted_daily_rate ?? item?.price_per_day ?? 0
   const rentalQuote = booking.quoted_rental_total ?? dailyRate * rentalDays
@@ -55,7 +54,7 @@ async function downloadReceiptPdf(booking: MyBooking) {
   if (item?.branches?.name) detail('Branch', item.branches.name)
   detail('Pickup', longDate(start))
   detail('Rental period ends', longDate(end))
-  detail('Return no later than', longDate(returnDeadline(end, graceDays)))
+  detail('Return no later than', longDate(returnDeadline(end)))
   detail('Rental rate', `${pdfPeso(dailyRate)} x ${rentalDays} day(s)`)
 
   pdf.setDrawColor(180)
@@ -165,7 +164,7 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
       {list.map((b) => {
         const st = norm(b.status)
         const x = b.items
-        const deadline = returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
+        const deadline = returnDeadline(b.end_date)
         const fee = b.quoted_late_fee_per_day ?? x?.late_fee_per_day ?? 0
         const tag = TAG[st] ?? [st, 'bg-reserved text-ink']
         const when =
@@ -190,7 +189,7 @@ export default function MyBookingsPage({ onMessage }: { onMessage: (branchId?: s
               {when && <p>{when}</p>}
               <p className="text-ink/60">Branch: {x?.branches?.name}</p>
               {st === 'pending' && <p className="font-bold">Waiting for the shop to confirm.</p>}
-              {b.extension_requested && <p className="font-bold">Extension requested; new return deadline would be {fmt(returnDeadline(addDays(b.end_date, 1), b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS))}. Waiting for the shop.</p>}
+              {b.extension_requested && <p className="font-bold">Extension requested; new return deadline would be {fmt(returnDeadline(addDays(b.end_date, 1)))}. Waiting for the shop.</p>}
               {b.payment_ref && (
                 <p className="font-bold">Deposit {peso(b.deposit_amount ?? 0)} paid online via {b.payment_method} (ref {b.payment_ref})</p>
               )}

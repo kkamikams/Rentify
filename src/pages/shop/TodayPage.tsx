@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Booking, Shop } from '../../lib/shop'
-import { branchName, DEFAULT_RETURN_GRACE_DAYS, diffDays, fmt, inBranch, norm, peso, returnDeadline, today } from '../../lib/shop'
+import { branchName, diffDays, fmt, inBranch, norm, peso, returnDeadline, today } from '../../lib/shop'
 import { btn, card, Tag } from '../../lib/ui'
 
 export default function TodayPage({ shop, branch }: { shop: Shop; branch: string }) {
@@ -8,7 +8,7 @@ export default function TodayPage({ shop, branch }: { shop: Shop; branch: string
   const now = today()
   const mine = shop.bookings.filter((b) => inBranch(branch, branchName(b)))
   const fee = (b: Booking) => b.items?.late_fee_per_day ?? 0
-  const deadline = (b: Booking) => returnDeadline(b.end_date, b.return_grace_days ?? DEFAULT_RETURN_GRACE_DAYS)
+  const deadline = (b: Booking) => returnDeadline(b.end_date)
   const late = (b: Booking) => diffDays(deadline(b), now)
   const is = (b: Booking, s: string) => norm(b.status) === s
 

@@ -1,8 +1,18 @@
 ALTER TABLE public.bookings
   ADD COLUMN IF NOT EXISTS return_grace_days integer NOT NULL DEFAULT 7;
 
+DROP TRIGGER IF EXISTS bookings_enforce_return_grace ON public.bookings;
+
 ALTER TABLE public.bookings
   DROP CONSTRAINT IF EXISTS bookings_return_grace_days_check;
+
+UPDATE public.bookings
+SET return_grace_days = 7
+WHERE return_grace_days IS DISTINCT FROM 7;
+
+ALTER TABLE public.bookings
+  ALTER COLUMN return_grace_days SET DEFAULT 7,
+  ALTER COLUMN return_grace_days SET NOT NULL;
 
 ALTER TABLE public.bookings
   ADD CONSTRAINT bookings_return_grace_days_check
@@ -15,11 +25,7 @@ SECURITY DEFINER
 SET search_path = pg_catalog
 AS $$
 BEGIN
-  IF TG_OP = 'UPDATE' THEN
-    NEW.return_grace_days := OLD.return_grace_days;
-  ELSE
-    NEW.return_grace_days := 7;
-  END IF;
+  NEW.return_grace_days := 7;
   RETURN NEW;
 END;
 $$;

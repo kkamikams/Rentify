@@ -226,7 +226,7 @@ export default function ShopApp({
   const pages: Record<TabId, ReactNode> = {
     requests: <RequestsPage {...p} />,
     today: <TodayPage {...p} />,
-    calendar: <CalendarPage branch={p.branch} />,
+    calendar: <CalendarPage branch={p.branch} shopId={shop.shopId} />,
     status: <StatusBoardPage {...p} />,
     pickup: <PickupReturnPage {...p} />,
     customers: <CustomersPage {...p} />,
