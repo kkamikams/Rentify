@@ -130,7 +130,7 @@ export default function NotificationBell({
         aria-controls="rentify-notifications"
         className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-reserved/50"
       >
-        <Bell size={20} />
+        <Bell size={20} fill="currentColor" />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-booked px-1 text-center text-[10px] font-semibold leading-4 text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
