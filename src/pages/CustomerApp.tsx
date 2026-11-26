@@ -244,7 +244,7 @@ export default function CustomerApp({
               className="absolute inset-0 h-full w-full object-cover object-right"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-[#F8F3EB]/90 via-[#F8F3EB]/65 to-[#F8F3EB]/15" />
-            <div className="relative z-10 mx-auto max-w-10xl px-12 py-16">
+            <div className="relative z-10 mx-auto max-w-10xl px-20 py-16">
               <h1 className="text-4xl font-bold leading-snug" style={{ fontFamily: "'Dela Gothic One', sans-serif" }}>
                 Dress for the moment,<br /> Rent it with{' '}
                 <span
