@@ -222,6 +222,16 @@ export default function CustomerApp({
         branch={view === 'catalog' ? active : ''}
         branchNames={branchNames}
         activeAccountPage={view === 'profile' || view === 'bookings' ? view : undefined}
+        userId={session?.user.id}
+        onNotificationOpen={(notification) => {
+          if (notification.type === 'customer_message') {
+            const branchId = notification.data.branch_id
+            setMsgBranch(typeof branchId === 'string' ? branchId : undefined)
+            go('messages')
+          } else {
+            go('bookings')
+          }
+        }}
         onHome={() => go('home')}
         onBranchChange={(b) => { setBranch(b); go('catalog') }}
         onMessages={() => { setMsgBranch(undefined); go('messages') }}

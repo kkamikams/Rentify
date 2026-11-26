@@ -1,13 +1,18 @@
 import { MessageCircle, User } from 'lucide-react'
+import NotificationBell from './NotificationBell'
+import type { Notification } from './NotificationBell'
 
 export default function CustomerHeader({
-  name, showBranches, branch, branchNames, activeAccountPage, onHome, onBranchChange, onMessages, onProfile, onBookings,
+  name, showBranches, branch, branchNames, activeAccountPage, userId, onNotificationOpen,
+  onHome, onBranchChange, onMessages, onProfile, onBookings,
 }: {
   name?: string
   showBranches: boolean
   branch: string
   branchNames: string[]
   activeAccountPage?: 'profile' | 'bookings'
+  userId?: string
+  onNotificationOpen?: (notification: Notification) => void
   onHome: () => void
   onBranchChange: (branch: string) => void
   onMessages: () => void
@@ -36,6 +41,7 @@ export default function CustomerHeader({
           </nav>
         )}
         <div className="ml-auto flex items-center gap-5">          {name && <span className="hidden text-sm sm:inline">{name}</span>}
+          {userId && onNotificationOpen && <NotificationBell userId={userId} onOpen={onNotificationOpen} />}
           <button onClick={onMessages} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
           <button onClick={onProfile} title="My profile" aria-label="My profile"
             aria-current={activeAccountPage === 'profile' ? 'page' : undefined}

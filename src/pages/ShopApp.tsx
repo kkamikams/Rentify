@@ -21,6 +21,7 @@ import ShopMessagesPage from './shop/ShopMessagesPage'
 import ShopProfilePage from './shop/ShopProfilePage'
 import { supabase } from '../lib/supabaseClient'
 import type { Shop } from '../lib/shop'
+import NotificationBell from '../components/NotificationBell'
 
 const TABS = [
   { id: 'requests', icon: Contact, title: 'Reservation Requests' },
@@ -258,6 +259,15 @@ export default function ShopApp({
           </nav>
           <div className="flex items-center gap-5">
             {multi && <span className="text-sm font-medium">{shopName}</span>}
+            <NotificationBell
+              userId={user.id}
+              onOpen={(notification) => {
+                if (notification.type === 'customer_message') setTab('messages')
+                else if (notification.type === 'shop_extension_request') setTab('pickup')
+                else if (notification.type === 'shop_message') setTab('messages')
+                else setTab('requests')
+              }}
+            />
             <button onClick={() => setTab('messages')} title="Messages" aria-label="Messages">
               <MessageCircle size={20} fill="currentColor" />
             </button>
