@@ -13,13 +13,22 @@ export type Notification = {
 }
 
 export default function NotificationBell({
-  userId, onOpen,
-}: { userId: string; onOpen: (notification: Notification) => void }) {
+  userId, onOpen, onOpenChange,
+}: {
+  userId: string
+  onOpen: (notification: Notification) => void
+  onOpenChange?: (open: boolean) => void
+}) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const updateOpen = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen)
+    onOpenChange?.(nextOpen)
+  }, [onOpenChange])
 
   const load = useCallback(async () => {
     const [list, unread] = await Promise.all([
@@ -64,11 +73,11 @@ export default function NotificationBell({
 
     const closeOnOutsideClick = (event: MouseEvent) => {
       if (event.target instanceof Node && !containerRef.current?.contains(event.target)) {
-        setOpen(false)
+        updateOpen(false)
       }
     }
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') updateOpen(false)
     }
 
     document.addEventListener('click', closeOnOutsideClick)
@@ -77,7 +86,7 @@ export default function NotificationBell({
       document.removeEventListener('click', closeOnOutsideClick)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [open])
+  }, [open, updateOpen])
 
   async function openNotification(notification: Notification) {
     if (!notification.read_at) {
@@ -98,7 +107,7 @@ export default function NotificationBell({
       setUnreadCount((current) => Math.max(0, current - 1))
     }
 
-    setOpen(false)
+    updateOpen(false)
     onOpen(notification)
   }
 
@@ -123,14 +132,16 @@ export default function NotificationBell({
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => { setOpen((current) => !current); void load() }}
+        onClick={() => { updateOpen(!open); void load() }}
         title="Notifications"
         aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         aria-expanded={open}
         aria-controls="rentify-notifications"
-        className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-reserved/50"
+        className={`relative flex h-9 w-9 items-center justify-center transition-colors ${
+          open ? 'text-booked' : 'text-ink'
+        }`}
       >
-        <Bell size={20} />
+        <Bell size={20} fill="currentColor" />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-booked px-1 text-center text-[10px] font-semibold leading-4 text-white">
             {unreadCount > 99 ? '99+' : unreadCount}

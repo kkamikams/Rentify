@@ -1,4 +1,5 @@
-import { MessageCircle, User } from 'lucide-react'
+import { useState } from 'react'
+import { MessageCircle, ShoppingBag, User } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 import type { Notification } from './NotificationBell'
 
@@ -10,7 +11,7 @@ export default function CustomerHeader({
   showBranches: boolean
   branch: string
   branchNames: string[]
-  activeAccountPage?: 'profile' | 'bookings'
+  activeAccountPage?: 'messages' | 'profile' | 'bookings'
   userId?: string
   onNotificationOpen?: (notification: Notification) => void
   onHome: () => void
@@ -19,6 +20,9 @@ export default function CustomerHeader({
   onProfile: () => void
   onBookings: () => void
 }) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const activePage = notificationsOpen ? undefined : activeAccountPage
+
   return (
     <header className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
       <div className="mx-auto flex max-w-10xl items-center px-6 py-4">
@@ -41,21 +45,33 @@ export default function CustomerHeader({
           </nav>
         )}
         <div className="ml-auto flex items-center gap-5">          {name && <span className="hidden text-sm sm:inline">{name}</span>}
-          {userId && onNotificationOpen && <NotificationBell userId={userId} onOpen={onNotificationOpen} />}
-          <button onClick={onMessages} title="Messages" aria-label="Messages"><MessageCircle size={20} fill="currentColor" /></button>
+          {userId && onNotificationOpen && (
+            <NotificationBell userId={userId} onOpen={onNotificationOpen} onOpenChange={setNotificationsOpen} />
+          )}
+          <button
+            onClick={onMessages}
+            title="Messages"
+            aria-label="Messages"
+            aria-current={activePage === 'messages' ? 'page' : undefined}
+            className={activePage === 'messages' ? 'text-booked' : 'text-ink'}
+          >
+            <MessageCircle size={20} fill="currentColor" />
+          </button>
           <button onClick={onProfile} title="My profile" aria-label="My profile"
-            aria-current={activeAccountPage === 'profile' ? 'page' : undefined}
-            className={activeAccountPage === 'profile' ? 'text-booked' : undefined}>
+            aria-current={activePage === 'profile' ? 'page' : undefined}
+            className={activePage === 'profile' ? 'text-booked' : 'text-ink'}>
             <User size={20} fill="currentColor" />
           </button>
           <button
             onClick={onBookings}
             title="My bookings"
             aria-label="My bookings"
-            aria-current={activeAccountPage === 'bookings' ? 'page' : undefined}
-            className={`-ml-1.5 flex items-center justify-center ${activeAccountPage === 'bookings' ? 'opacity-70' : ''}`}
+            aria-current={activePage === 'bookings' ? 'page' : undefined}
+            className={`-ml-1.5 flex h-8 w-8 items-center justify-center ${
+              activePage === 'bookings' ? 'text-booked' : 'text-ink'
+            }`}
           >
-            <img src="/bookings.png" alt="My bookings" className="block h-8 w-8 object-contain" />
+            <ShoppingBag size={20} fill="currentColor" />
           </button>
         </div>
       </div>
