@@ -238,7 +238,10 @@ export default function ShopApp({
     profile: <ShopProfilePage shop={shop} shopName={shopName} onSignOut={onSignOut} />,
   }
   const title =
-    tab === 'messages' ? 'Messages' : tab === 'profile' ? 'Shop profile' : TABS.find((t) => t.id === tab)!.title
+    tab === 'messages' ? 'Messages'
+      : tab === 'profile' ? 'Shop profile'
+        : tab === 'pickup' && multi ? 'Return Checklist'
+          : TABS.find((t) => t.id === tab)!.title
 
   return (
     <div className="min-h-screen bg-cream">
@@ -281,7 +284,8 @@ export default function ShopApp({
       <nav className="bg-cream shadow-[0_2px_3px_rgba(63,49,43,0.25)]">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-12 py-4">
           {TABS.map(({ id, icon: Icon, title }) => (
-            <button key={id} title={title} aria-label={title} onClick={() => setTab(id)}
+            <button key={id} title={id === 'pickup' && multi ? 'Return Checklist' : title}
+              aria-label={id === 'pickup' && multi ? 'Return Checklist' : title} onClick={() => setTab(id)}
               className={`pb-1 ${tab === id ? 'border-b-2 border-ink' : 'border-b-2 border-transparent'}`}>
               <Icon size={22} strokeWidth={2.4} />
             </button>

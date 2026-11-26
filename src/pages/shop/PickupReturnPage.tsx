@@ -63,14 +63,15 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
   const [paid, setPaid] = useState(!!b.deposit_received || !!b.payment_ref)
   const [method, setMethod] = useState(b.payment_method ?? (b.payment_ref ? 'GCash' : 'Cash'))
   const [lateFeePerDay, setLateFeePerDay] = useState(fee)
-  const [lateAdjustment, setLateAdjustment] = useState<'none' | 'waive' | 'percent' | 'peso'>('none')
+  const [lateFeeWaived, setLateFeeWaived] = useState(false)
+  const [lateAdjustment, setLateAdjustment] = useState<'none' | 'percent' | 'peso'>('none')
   const [lateAdjustmentValue, setLateAdjustmentValue] = useState(0)
   const [msg, setMsg] = useState('')
 
   const missing = ps.filter((p) => !ticked[p.name])
   const missingFee = missing.reduce((s, p) => s + p.price, 0)
   const baseLateFee = late * lateFeePerDay
-  const lateFee = lateAdjustment === 'waive'
+  const lateFee = lateFeeWaived
     ? 0
     : lateAdjustment === 'percent'
       ? Math.round(baseLateFee * (1 - Math.max(0, lateAdjustmentValue) / 100))
@@ -96,10 +97,11 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
 
   const complete = () =>
     update({
-      status: 'returned', days_late: late, late_fee_waived: lateAdjustment === 'waive', late_fee: lateFee,
+      status: 'returned', days_late: late, late_fee_waived: lateFeeWaived, late_fee: lateFee,
       late_fee_note: [
         missing.length ? `Missing: ${missing.map((p) => p.name).join(', ')} (${peso(missingFee)})` : '',
-        lateAdjustment !== 'none' ? `Late fee adjustment: ${lateAdjustment === 'waive' ? 'Waived' : `${peso(lateAdjustmentValue)}${lateAdjustment === 'percent' ? '%' : ''} discount`}` : '',
+        lateFeeWaived ? 'Daily late fee waived for this customer' :
+          lateAdjustment !== 'none' ? `Late fee adjustment: ${peso(lateAdjustmentValue)}${lateAdjustment === 'percent' ? '%' : ''} discount` : '',
         cond !== 'Good' ? `Condition: ${cond}` : '',
       ].filter(Boolean).join('. ') || null,
     })
@@ -158,40 +160,56 @@ function Checklist({ shop, b }: { shop: Shop; b: B }) {
           </label>
           </div>
           <div className="mb-5 grid grid-cols-2 gap-10">
-          <label className="text-base text-ink/70">Late fee per day (₱)
-            <input
-              type="number"
-              min={0}
-              className={`${input} mt-1 py-3 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
-              value={lateFeePerDay}
-              onChange={(e) => setLateFeePerDay(Math.max(0, Number(e.target.value) || 0))}
-            />
-          </label>
-            <label className="text-base text-ink/70">Late fee adjustment
+            <label className="text-base text-ink/70">Late fee per day (₱)
+              <input
+                type="number"
+                min={0}
+                className={`${input} mt-1 py-3 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+                value={lateFeePerDay}
+                onChange={(e) => setLateFeePerDay(Math.max(0, Number(e.target.value) || 0))}
+              />
+            </label>
+            <label className="text-base text-ink/70">Late fee discount
               <select className={`${input} mt-1 py-3`} value={lateAdjustment} onChange={(e) => {
-                setLateAdjustment(e.target.value as 'none' | 'waive' | 'percent' | 'peso')
+                setLateAdjustment(e.target.value as 'none' | 'percent' | 'peso')
+                setLateFeeWaived(false)
                 setLateAdjustmentValue(0)
               }}>
                 <option value="none">None</option>
-                <option value="waive">Waive late fee</option>
                 <option value="percent">Discount (%)</option>
                 <option value="peso">Discount (₱)</option>
               </select>
             </label>
           </div>
-            {(lateAdjustment === 'percent' || lateAdjustment === 'peso') && (
-                        <label className="mb-5 block max-w-sm text-base text-ink/70">
-                          {lateAdjustment === 'percent' ? 'Discount percentage' : 'Discount amount'}
-                          <input
-                            type="number"
-                            min={0}
-                            max={lateAdjustment === 'percent' ? 100 : undefined}
-                            className={`${input} mt-1 py-3 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
-                            value={lateAdjustmentValue}
-                            onChange={(e) => setLateAdjustmentValue(Math.max(0, Number(e.target.value) || 0))}
-                          />
-                        </label>
-                      )}
+          <label className="mb-5 flex cursor-pointer items-center gap-3 text-base font-semibold">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-booked"
+              checked={lateFeeWaived}
+              onChange={(e) => {
+                setLateFeeWaived(e.target.checked)
+                setLateAdjustment('none')
+                setLateAdjustmentValue(0)
+              }}
+            />
+            <span>
+              Waive daily late fee for this customer
+              <span className="mt-1 block text-sm font-normal text-ink/60">Applies only to this booking.</span>
+            </span>
+          </label>
+          {(lateAdjustment === 'percent' || lateAdjustment === 'peso') && (
+            <label className="mb-5 block max-w-sm text-base text-ink/70">
+              {lateAdjustment === 'percent' ? 'Discount percentage' : 'Discount amount'}
+              <input
+                type="number"
+                min={0}
+                max={lateAdjustment === 'percent' ? 100 : undefined}
+                className={`${input} mt-1 py-3 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+                value={lateAdjustmentValue}
+                onChange={(e) => setLateAdjustmentValue(Math.max(0, Number(e.target.value) || 0))}
+              />
+            </label>
+          )}
           {late > 0 && nextRisk && (
             <p className="mb-5 rounded-sm border border-cleaning/30 bg-cleaning/10 px-4 py-3 text-sm font-semibold text-cleaning">
               Late return puts the next pickup at risk: {nextRisk.customer_name ?? 'A customer'} is due to pick up
