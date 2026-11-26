@@ -45,7 +45,7 @@ export default function App() {
       return
     }
     supabase
-      .from('shop_members')
+      .from('shop_membe')
       .select('role, shops(id, name)')
       .then(({ data, error }) => {
         if (error) setError(error.message)
