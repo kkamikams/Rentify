@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowLeft, Navigation } from 'lucide-react'
+import { Navigation } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { isValidName, digitsOnly, isValidPhone } from '../../lib/name'
 
@@ -12,9 +12,7 @@ const smallBtn = 'rounded-sm border border-ink/15 bg-white px-4 py-2 text-sm fon
 const field = 'w-full rounded-sm border border-ink/25 bg-white px-3 py-2.5 text-sm'
 
 // Left menu (Profile / My bookings) shared by both account pages
-export function AccountLayout({
-  tab, onTab, onHome, children,
-}: { tab: Tab; onTab: (t: Tab) => void; onHome: () => void; children: ReactNode }) {
+export function AccountLayout({ tab, onTab, children }: { tab: Tab; onTab: (t: Tab) => void; children: ReactNode }) {
   const item = (t: Tab, label: string) => (
     <button onClick={() => onTab(t)}
       className={`block w-fit border-b-2 pb-0.5 text-sm font-semibold ${tab === t ? 'border-ink' : 'border-transparent'}`}>
@@ -22,15 +20,9 @@ export function AccountLayout({
     </button>
   )
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-8">
-      <button onClick={onHome} aria-label="Back to home page" title="Back to home page"
-        className="group mb-5 inline-flex items-center gap-2 text-sm text-ink/80 transition-colors hover:text-booked">
-        <ArrowLeft size={17} strokeWidth={1.8} className="transition-transform group-hover:-translate-x-0.5" /> Back
-      </button>
-      <div className="grid items-start gap-10 md:grid-cols-[160px_1fr]">
-        <nav className="pt-1 space-y-4">{item('profile', 'Profile')}{item('bookings', 'My bookings')}</nav>
-        <div className="min-w-0 w-full">{children}</div>
-      </div>
+    <div className="mx-auto grid w-full max-w-6xl items-start gap-10 px-6 py-8 md:grid-cols-[160px_1fr]">
+      <nav className="pt-1 space-y-4">{item('profile', 'Profile')}{item('bookings', 'My bookings')}</nav>
+      <div className="min-w-0 w-full">{children}</div>
     </div>
   )
 }
