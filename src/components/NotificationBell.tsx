@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Bell, CheckCheck } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
@@ -19,6 +19,7 @@ export default function NotificationBell({
   const [unreadCount, setUnreadCount] = useState(0)
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
     const [list, unread] = await Promise.all([
@@ -57,6 +58,26 @@ export default function NotificationBell({
 
     return () => { void supabase.removeChannel(channel) }
   }, [load, userId])
+
+  useEffect(() => {
+    if (!open) return
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (event.target instanceof Node && !containerRef.current?.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('click', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('click', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
 
   async function openNotification(notification: Notification) {
     if (!notification.read_at) {
@@ -99,7 +120,7 @@ export default function NotificationBell({
   }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => { setOpen((current) => !current); void load() }}
