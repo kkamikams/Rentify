@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import type { Cost, Shop } from '../../lib/shop'
 import { branchName, income, inBranch, isSold, peso } from '../../lib/shop'
-import { btn, card, input, Stat, Sub, td, th } from '../../lib/ui'
+import { btn, card, input, Stat, td, th } from '../../lib/ui'
 
 const CATS = ['Garment purchase', 'Cleaning', 'Repair', 'Rent and utilities', 'Staff', 'Other']
 
@@ -86,7 +86,7 @@ export default function CostsPage({ shop, branch }: { shop: Shop; branch: string
 
       <section className={card}>
         <h3 className="text-xl font-bold">Profit per item</h3>
-        <Sub>Costs set for a whole branch or the shop are not split across items.</Sub>
+        <p className="mb-5 mt-1 text-sm text-ink/60">Costs set for a whole branch or the shop are not split across items.</p>
         <table className="mt-6 w-full">
           <thead><tr>{['Item', 'Income', 'Costs', 'Profit'].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
           <tbody>
