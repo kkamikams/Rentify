@@ -192,6 +192,9 @@ export default function CustomerApp({
   const shown = products.filter(
     (p) => (category === 'All' || p.category === category) && p.name.toLowerCase().includes(q.toLowerCase())
   )
+  const categoryImage = (value: string) =>
+    cat.shops.find((shop) => shop.category_images?.[value])?.category_images?.[value]
+    ?? cat.items.find((item) => item.category === value && item.image_url)?.image_url
 
   const go = (v: View, c = 'All') => {
     // Visitors who aren't logged in are sent to the log in page for account pages
@@ -277,13 +280,17 @@ export default function CustomerApp({
               </h2>
             </div>
             <div className="grid grid-cols-2 gap-7 sm:grid-cols-4">
-              {CATS.map((c) => (
-                <div key={c} className="flex h-96 flex-col justify-end bg-white p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]">
-                  <button onClick={() => go('catalog', c)} className="w-full rounded-sm bg-[#A66F5B] py-4 text-xl font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
-                    {label(c)}{c === 'Costume' ? 's' : ''}
-                  </button>
-                </div>
-              ))}
+              {CATS.map((c) => {
+                const image = categoryImage(c)
+                return (
+                  <div key={c} className="flex h-96 flex-col justify-end bg-white bg-cover bg-center p-5 shadow-[0_5px_5px_rgba(0,0,0,0.08)]"
+                    style={image ? { backgroundImage: `url(${image})` } : undefined}>
+                    <button onClick={() => go('catalog', c)} className="w-full rounded-sm bg-[#A66F5B] py-4 text-xl font-semibold text-[#F8F3EB] shadow-[0_4px_2px_0_rgba(0,0,0,0.25)] transition-shadow duration-20 hover:bg-[#45352F] hover:text-[#F8F3EB] hover:[text-shadow:0_0_10px_rgba(248,243,235,1)] hover:shadow-[0_0_10px_0_rgba(69,53,47,1)] active:bg-[#45352F] active:text-white active:shadow-[inset_0_2px_7px_0_rgba(0,0,0,0.25),0_0_10px_0_rgba(69,53,47,1)]">
+                      {label(c)}{c === 'Costume' ? 's' : ''}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
 
             <div className="mb-7 mt-7 text-center">
